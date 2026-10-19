@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Drabina błędów</title>
+<link rel="stylesheet" href="../assets/lesson.css">
+<link rel="stylesheet" href="../assets/ladder.css">
+<style>
+  /* Ściąga: ma się zmieścić na jednej kartce. */
+  .page { max-width: 50rem; padding-top: 2.2rem; }
+  h2 { margin: 1.8rem 0 .7rem; padding-top: .8rem; }
+  table { font-size: .78rem; margin-bottom: 1rem; }
+  th, td { padding: .4rem .55rem; }
+  td code { font-size: .9em; }
+  .rung { padding: .5rem 0; }
+  @media print { body { font-size: 9pt; } h1 { font-size: 20pt; } }
+</style>
+</head>
+<body>
+<main class="page">
+
+  <p class="eyebrow">Ściąga &middot; Sieci dla inżyniera danych</p>
+  <h1>Drabina błędów</h1>
+  <p class="subtitle">Na którym szczeblu padło połączenie — i czym to sprawdzić.</p>
+
+  <div class="note">
+    <b>Reguła 1.</b> Błąd pochodzi z <b>pierwszego szczebla, który nie przeszedł</b>. Wyższych nikt nie próbował.<br>
+    <b>Reguła 2.</b> <b>Kto mówi?</b> Kod statusu HTTP albo <code>FATAL:</code> = mówi serwer (szczebel 4–5).
+    Wszystko inne = mówi Twój system, do serwera nie dotarłeś (1–3).<br>
+    <b>Reguła 3.</b> Na szczeblach 4–5 serwer często ukrywa szczegóły przed klientem. Pełny powód jest w <b>logu serwera</b>.
+  </div>
+
+  <ol class="ladder">
+    <li class="rung"><span class="rung__n">1</span><div class="rung__body">
+      <p class="rung__name">DNS <span>nazwa → adres IP</span></p>
+      <p class="rung__tool"><code>getent hosts nazwa</code> (to, co widzi program; kod 2 = brak) · <code>dig nazwa</code> (sam DNS) · sprawdzaj <b>tam, gdzie działa program</b> — <a href="rozwiazywanie-nazw.html">ściąga</a></p></div></li>
+    <li class="rung"><span class="rung__n">2</span><div class="rung__body">
+      <p class="rung__name">TCP <span>ktoś słucha pod adres:port?</span></p>
+      <p class="rung__tool"><code>nc -zv -w 3 host port</code> · <code>pg_isready -h host -p port</code> · lokalnie <code>ss -tlnp</code></p></div></li>
+    <li class="rung"><span class="rung__n">3</span><div class="rung__body">
+      <p class="rung__name">TLS <span>czy to na pewno on? (ocenia klient)</span></p>
+      <p class="rung__tool"><code>curl -v</code>: <code>* Server certificate</code>, <code>* SSL certificate verify ok.</code></p></div></li>
+    <li class="ladder__divide">↓ od tej linii komunikat cytuje serwer ↓</li>
+    <li class="rung"><span class="rung__n">4</span><div class="rung__body">
+      <p class="rung__name">Auth <span>kim jesteś i czy wolno ci?</span></p>
+      <p class="rung__tool">HTTP <code>401</code>/<code>403</code> · <code>FATAL: password authentication failed</code> · <code>FATAL: no pg_hba.conf entry</code></p></div></li>
+    <li class="rung"><span class="rung__n">5</span><div class="rung__body">
+      <p class="rung__name">Aplikacja <span>o co prosisz?</span></p>
+      <p class="rung__tool">HTTP <code>404</code>/<code>5xx</code> · <code>FATAL: database "…" does not exist</code></p></div></li>
+  </ol>
+
+  <h2>Jak czytać linię błędu <code>psql</code></h2>
+<pre><code>psql: error: connection to server at "10.0.3.17", port 5432 failed: <span class="hl">FATAL:  no pg_hba.conf entry …</span>
+<span class="cmt">└────────────── prefiks: GDZIE próbowałem ─────────────┘        └──── werdykt: CO się stało ────┘</span></code></pre>
+  <div class="note">
+    <b>Adres IP i port są w prefiksie zawsze</b> — przy każdym szczeblu. Nic nie mówią o tym, gdzie padło.
+    Patrz tylko na tekst po <code>failed:</code>. Zaczyna się od <code>FATAL:</code> → mówi Postgres (4–5).
+    Nie zaczyna → mówi system (1–3). Słowo <code>refused</code> bez <code>FATAL:</code> to <b>nie</b> odmowa dostępu, tylko „nikogo tu nie ma".
+  </div>
+
+  <h2>Komunikaty — prawdziwe, z Twojego laptopa</h2>
+  <table>
+    <thead><tr><th>#</th><th><code>curl</code> — kod wyjścia i treść</th><th><code>psql</code></th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td><code>6</code> Could not resolve host</td><td>could not translate host name "…" to address</td></tr>
+      <tr><td>2</td><td><code>7</code> Failed to connect … after <b>0 ms</b> (odmowa)<br><code>28</code> … after <b>4002 ms</b>: Timeout was reached (cisza)</td><td>Connection refused / Is the server running…?<br>timeout expired</td></tr>
+      <tr><td>3</td><td><code>60</code> SSL certificate problem: certificate has expired<br><code>60</code> no alternative certificate subject name matches<br><code>35</code> SSL connect error <span class="cmt">(wg man, nie z laptopa)</span></td><td>server does not support SSL, but SSL was required</td></tr>
+      <tr><td>4</td><td><code>0</code> (!) + status 401/403 · z <code>-f</code>: <code>22</code></td><td>FATAL: password authentication failed for user "…"<br><span class="cmt">także gdy użytkownik nie istnieje — patrz log</span></td></tr>
+      <tr><td>5</td><td><code>0</code> (!) + status 404/500 · z <code>-f</code>: <code>22</code></td><td>FATAL: database "…" does not exist</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Co zwykle stoi za danym szczeblem w potoku</h2>
+  <table>
+    <thead><tr><th>#</th><th>Typowa przyczyna</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td>Literówka w hoście · nazwa wewnętrzna, a jesteś poza VPN · kontener nie widzi firmowego DNS.</td></tr>
+      <tr><td>2 odmowa</td><td>Usługa nie działa · zły port · usługa słucha na <code>127.0.0.1</code>, a pukasz z zewnątrz.</td></tr>
+      <tr><td>2 cisza</td><td>Firewall / security group · zła sieć (VPC, brak trasy) · adres prywatny spoza Twojej sieci.</td></tr>
+      <tr><td>3</td><td>Certyfikat wygasł · self-signed w firmie · łączysz się po IP zamiast po nazwie z certyfikatu.</td></tr>
+      <tr><td>4</td><td>Złe hasło / wygasły token · brak reguły w <code>pg_hba.conf</code> dla Twojego adresu · brak uprawnień.</td></tr>
+      <tr><td>5</td><td>Zła ścieżka lub wersja API · zła nazwa bazy (bez nazwy Postgres bierze nazwę użytkownika) · awaria serwera.</td></tr>
+    </tbody>
+  </table>
+
+  <div class="note">
+    Źródła: <a href="https://www.postgresql.org/docs/current/server-start.html#CLIENT-CONNECTION-PROBLEMS">PostgreSQL: Client Connection Problems</a> ·
+    <a href="https://www.postgresql.org/docs/current/client-authentication-problems.html">PostgreSQL: Authentication Problems</a> ·
+    <code>man curl</code> (EXIT CODES) · <code>man pg_isready</code> (EXIT STATUS) ·
+    <a href="https://hpbn.co/transport-layer-security-tls/">HPBN: TLS</a>
+  </div>
+
+  <nav class="nav">
+    <a href="../lessons/0003-drabina-polaczenia.html">&larr; Lekcja 03</a>
+    <a href="komendy-diagnostyczne.html">Ściąga: komendy i flagi</a>
+    <a href="adres-polaczenia.html">Ściąga: anatomia adresu</a>
+    <a href="rozwiazywanie-nazw.html">Ściąga: rozwiązywanie nazw</a>
+    <a href="glossary.html">Glosariusz</a>
+  </nav>
+
+</main>
+</body>
+</html>

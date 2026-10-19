@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Drabina połączenia</title>
+<link rel="stylesheet" href="../assets/lesson.css">
+<link rel="stylesheet" href="../assets/quiz.css">
+<link rel="stylesheet" href="../assets/ladder.css">
+</head>
+<body>
+<main class="page">
+
+  <p class="eyebrow">Lekcja 03 &middot; Sieci dla inżyniera danych</p>
+  <h1>Drabina połączenia</h1>
+  <p class="subtitle">Każdy błąd połączenia mówi, na którym szczeblu spadłeś. Trzeba tylko wiedzieć, jak go przeczytać.</p>
+
+  <div class="goal">
+    <strong>Po tej lekcji</strong>
+    Patrząc na komunikat błędu z <code>curl</code> albo <code>psql</code>, powiesz, na którym z pięciu etapów
+    padło połączenie — DNS, TCP, TLS, Auth czy Aplikacja — i którą komendą to potwierdzić.
+    Wszystkie błędy w tej lekcji wygenerowałem na Twoim laptopie, a Ty wygenerujesz je sam.
+  </div>
+
+  <h2>Najpierw z pamięci</h2>
+
+  <div class="recall" data-hint="Odpowiedz na głos: kto wysłał tę linię i skąd to wiesz?">
+    <p class="recall__q"><span class="tag">03.1</span> W Twoim <code>curl -v</code> była linia <code>&gt; User-Agent: curl/8.5.0</code>. Kto ją wysłał — Ty czy GitHub?</p>
+    <div class="recall__a">
+      <b>Ty.</b> <code>curl</code> przedstawia w niej <i>sam siebie</i> — GitHub nie mógł wiedzieć, jakiej wersji curla używasz, zanim mu tego nie powiedziałeś.
+      Strzałka pokazuje kierunek względem Twojego terminala: <code>&gt;</code> <b>wychodzi ode mnie</b>, <code>&lt;</code> <b>przychodzi do mnie</b>.
+      Body odpowiedzi nie ma żadnego znaku.
+    </div>
+  </div>
+
+  <div class="note">
+    <b>Poprawka do lekcji 02 — moja, nie Twoja.</b> W zadaniu otwartym oba znaki nazwałeś „odpowiedzią z HTTP".
+    To wina mojej tabeli: dałem kolumnę „Warstwa" z wielkim słowem <i>HTTP</i>, a kierunek schowałem w dopisku.
+    Warstwę zapamiętałeś dobrze — zgubiłeś to, co ukryłem. Kierunek jest ważniejszy, bo mówi, <b>czyja to wina</b>:
+    zły nagłówek w <code>&gt;</code> to problem po Twojej stronie, kod <code>401</code> w <code>&lt;</code> to werdykt serwera.
+    Dziś ta sama idea — <i>kto mówi?</i> — wraca jako główne narzędzie.
+  </div>
+
+  <div class="note">
+    <b>Twoje pytanie 3 (Peer Address) — i druga poprawka.</b> Napisałem, że <code>0.0.0.0:*</code> w kolumnie Peer
+    znaczy „przyjmę od każdego". To było nieprecyzyjne. Gniazdo nasłuchujące <b>nie ma jeszcze rozmówcy</b>,
+    więc <code>ss</code> wstawia tam gwiazdki — tej kolumny <b>nigdzie się nie ustawia</b>. Prawdziwy peer pojawia się
+    dopiero przy <code>ESTAB</code> (widziałeś to w <code>ss -tnp</code>). Kto <i>może</i> się połączyć, decydują trzy
+    inne rzeczy: adres nasłuchu (<a href="0001-adres-polaczenia.html">lekcja 01</a>), firewall i — dla Postgresa —
+    plik <code>pg_hba.conf</code>. Dwa ostatnie pojawią się dziś jako szczeble drabiny, a szczegółowo w lekcji o wystawianiu bazy.
+  </div>
+
+  <h2>Pojęcie: połączenie to pięć pytań po kolei</h2>
+
+  <p>
+    Kiedy potok łączy się z bazą albo API, nie dzieje się „jedno połączenie". Dzieje się <b>pięć kolejnych
+    pytań</b> i każde musi dostać odpowiedź „tak", zanim padnie następne. Stąd reguła, na której stoi cała
+    diagnostyka: <b>błąd zawsze pochodzi z pierwszego szczebla, który nie przeszedł</b> — wyższych nikt nawet nie próbował.
+  </p>
+
+  <ol class="ladder">
+    <li class="rung">
+      <span class="rung__n">1</span>
+      <div class="rung__body">
+        <p class="rung__name">DNS <span>nazwa → adres IP</span></p>
+        <p class="rung__q">Pod jakim adresem mieszka <code>api.github.com</code>? Odpowiada resolver — u Ciebie <code>127.0.0.53</code>. <a href="../reference/glossary.html#dns">glosariusz</a></p>
+        <p class="rung__tool">Sprawdzasz: <code>dig nazwa</code></p>
+      </div>
+    </li>
+    <li class="rung">
+      <span class="rung__n">2</span>
+      <div class="rung__body">
+        <p class="rung__name">TCP <span>adres:port → ktoś słucha?</span></p>
+        <p class="rung__q">Czy pod tym adresem i portem stoi program, który podejmie uścisk dłoni? Trzy wyniki, które już znasz: <i>succeeded</i>, <i>refused</i>, cisza. <a href="../reference/glossary.html#tcp">glosariusz</a></p>
+        <p class="rung__tool">Sprawdzasz: <code>nc -zv -w 3 host port</code></p>
+      </div>
+    </li>
+    <li class="rung">
+      <span class="rung__n">3</span>
+      <div class="rung__body">
+        <p class="rung__name">TLS <span>czy to na pewno on?</span></p>
+        <p class="rung__q">Serwer pokazuje certyfikat, a <b>Twój klient</b> go ocenia: czy ważny, czy na tę nazwę, czy podpisany przez zaufany urząd. Dopiero potem szyfrowanie. <a href="../reference/glossary.html#tls">glosariusz</a></p>
+        <p class="rung__tool">Sprawdzasz: gwiazdki <code>* SSL</code> / <code>* Server certificate</code> w <code>curl -v</code></p>
+      </div>
+    </li>
+    <li class="ladder__divide">↓ od tej linii komunikat cytuje serwer ↓</li>
+    <li class="rung">
+      <span class="rung__n">4</span>
+      <div class="rung__body">
+        <p class="rung__name">Auth <span>kim jesteś i czy wolno ci?</span></p>
+        <p class="rung__q">Serwer Cię słyszy, ale nie wpuszcza: złe hasło, brak tokenu, brak reguły dla Twojego adresu. HTTP <code>401</code>/<code>403</code>, w Postgresie <code>FATAL: password…</code> lub <code>FATAL: no pg_hba.conf entry…</code>.</p>
+        <p class="rung__tool">Sprawdzasz: linia statusu <code>&lt; HTTP/2 …</code> albo tekst po <code>FATAL:</code></p>
+      </div>
+    </li>
+    <li class="rung">
+      <span class="rung__n">5</span>
+      <div class="rung__body">
+        <p class="rung__name">Aplikacja <span>o co prosisz?</span></p>
+        <p class="rung__q">Wpuszczono Cię, ale prośby nie da się spełnić: nie ma takiego zasobu (<code>404</code>, <code>database … does not exist</code>) albo serwer sam się wywrócił (<code>500</code>). <a href="../reference/glossary.html#status">glosariusz</a></p>
+        <p class="rung__tool">Sprawdzasz: status i body odpowiedzi</p>
+      </div>
+    </li>
+  </ol>
+
+  <p>
+    TLS jedzie <b>na</b> TCP — najpierw musi dojść do skutku uścisk dłoni TCP, dopiero potem zaczyna się
+    uścisk TLS (<a href="https://hpbn.co/transport-layer-security-tls/#tls-handshake">HPBN, rozdz. TLS</a>).
+    Połączenie z Postgresem na Twoim laptopie w ogóle nie ma szczebla 3 — bez szyfrowania drabina skraca się do czterech.
+  </p>
+
+  <h3>Jedno pytanie, które rozstrzyga połowę przypadków: <i>kto mówi?</i></h3>
+
+  <p>
+    Poniżej przerywanej linii odzywa się <b>serwer</b>: komunikat zawiera jego słowa — kod statusu HTTP
+    albo prefiks <code>FATAL:</code>. Powyżej niej mówi <b>Twój własny system</b>, bo do serwera nigdy nie dotarłeś.
+    Dokumentacja PostgreSQL mówi to wprost: <i>„<code>Connection refused</code> in this context does <b>not</b> mean
+    that the server got your connection request and rejected it"</i>
+    (<a href="https://www.postgresql.org/docs/current/server-start.html#CLIENT-CONNECTION-PROBLEMS">PostgreSQL: Client Connection Problems</a>).
+    Odmowę wystawia jądro systemu docelowego, nie Postgres — bo Postgresa tam po prostu nie ma.
+  </p>
+
+  <h2>Twoje błędy, szczebel po szczeblu</h2>
+
+  <p>Wygenerowane dziś na Twoim laptopie (<code>curl 8.5.0</code>, <code>psql 16</code>, Postgres 18 w Dockerze):</p>
+
+  <table>
+    <thead><tr><th>Szczebel</th><th><code>curl</code> (kod wyjścia)</th><th><code>psql</code></th></tr></thead>
+    <tbody>
+      <tr><td><b>1 DNS</b></td>
+        <td><code>(6) Could not resolve host: nie-istnieje-xyz123.example-dne.com</code></td>
+        <td><code>could not translate host name "nie-istnieje-…" to address: Name or service not known</code></td></tr>
+      <tr><td><b>2 TCP</b> odmowa</td>
+        <td><code>(7) Failed to connect to 127.0.0.1 port 5432 after <b>0 ms</b>: Couldn't connect to server</code></td>
+        <td><code>… port 5432 failed: Connection refused</code><br><code>Is the server running on that host…?</code></td></tr>
+      <tr><td><b>2 TCP</b> cisza</td>
+        <td><code>(28) Failed to connect to api.github.com port 444 after <b>4002 ms</b>: Timeout was reached</code></td>
+        <td><code>… "10.255.255.1", port 5432 failed: timeout expired</code></td></tr>
+      <tr><td><b>3 TLS</b></td>
+        <td><code>(60) SSL certificate problem: certificate has expired</code><br><code>(60) SSL: no alternative certificate subject name matches target host name</code></td>
+        <td><code>server does not support SSL, but SSL was required</code></td></tr>
+      <tr><td><b>4 Auth</b></td>
+        <td>status <code>401</code> — i kod wyjścia <b><code>0</code></b></td>
+        <td><code>FATAL:  password authentication failed for user "postgres"</code></td></tr>
+      <tr><td><b>5 Aplikacja</b></td>
+        <td>status <code>404</code> — i kod wyjścia <b><code>0</code></b></td>
+        <td><code>FATAL:  database "hurtownia" does not exist</code></td></tr>
+    </tbody>
+  </table>
+
+  <p>Trzy rzeczy z tej tabeli, które warto zabrać do pracy:</p>
+
+  <h3>1. Czas mówi, czy to odmowa, czy cisza</h3>
+  <p>
+    <code>curl</code> w obu przypadkach pisze „Failed to connect" — ale spójrz na liczbę milisekund.
+    <b>0 ms</b> to odmowa: maszyna odpowiedziała natychmiast. <b>4002 ms</b> to cisza: czekał, aż minie limit.
+    To dokładnie Twoja reguła z <code>notes.txt</code> — tylko zapisana liczbą.
+  </p>
+
+  <h3>2. <code>curl</code> uznaje 401 i 404 za sukces</h3>
+  <p>
+    Każdy program po zakończeniu zostawia systemowi <b>kod wyjścia</b> (<a href="../reference/glossary.html#exitcode">glosariusz</a>):
+    <code>0</code> = udało się, cokolwiek innego = błąd. Dla <code>curl</code> „udało się" znaczy
+    <i>„dostarczyłem odpowiedź"</i> — nawet jeśli brzmiała „nie masz dostępu". Dopiero flaga <code>-f</code>
+    (<code>--fail</code>) zmienia to w kod <code>22</code>; <code>man curl</code>: <i>„This return code only appears if -f, --fail is used"</i>.
+  </p>
+  <div class="note">
+    <b>Dlaczego to ważne w potoku.</b> Orkiestrator (Airflow, cron, Cloud Run Job) patrzy właśnie na kod wyjścia.
+    Krok z gołym <code>curl</code> do API z wygasłym tokenem <b>zakończy się na zielono</b> i zapisze do hurtowni
+    tekst <code>{"message":"Requires authentication"}</code> zamiast danych. Przy przeglądaniu kodu od AI szukaj
+    <code>-f</code> albo jawnego sprawdzenia statusu.
+  </div>
+
+  <h3>3. Postgres celowo milczy o tym, czego nie ma</h3>
+  <p>
+    Połączyłem się jako nieistniejący użytkownik <code>etl</code>. Dokumentacja zapowiada komunikat
+    <code>user "etl" does not exist</code>
+    (<a href="https://www.postgresql.org/docs/current/client-authentication-problems.html">PostgreSQL: Authentication Problems</a>) —
+    a serwer odpowiedział <b>tym samym</b> co przy złym haśle: <code>password authentication failed for user "etl"</code>.
+    Prawdziwy powód jest tylko w logu serwera:
+  </p>
+<pre><code>FATAL:  password authentication failed for user "etl"
+DETAIL:  <span class="hl">Role "etl" does not exist.</span>
+        Connection matched file ".../pg_hba.conf" line 128: "host all all all scram-sha-256"</code></pre>
+  <p>
+    To ta sama filozofia co firewall GitHuba na porcie 444, którą sam opisałeś: <b>nie zdradzaj obcemu, co istnieje</b>.
+    Stąd praktyczna zasada z tej samej strony dokumentacji: <i>„The server log might contain more information…
+    than is reported to the client"</i>. Na szczeblach 4–5 odpowiedź często leży w logu serwera, nie w Twoim terminalu.
+  </p>
+
+  <h2>Trening: który szczebel?</h2>
+  <p>Osiem komunikatów, których w lekcji nie było. Przy każdym najpierw zapytaj: <i>kto mówi?</i></p>
+  <p class="score"></p>
+
+  <div class="quiz">
+    <p class="quiz__q"><span class="tag">03.2·1</span> <code>curl: (28) Failed to connect to 10.0.3.17 port 443 after 30002 ms: Timeout was reached</code></p>
+    <div class="quiz__opts">
+      <button class="quiz__opt" data-why="DNS już zadziałał — w komunikacie jest gotowy adres IP.">DNS</button>
+      <button class="quiz__opt" data-correct data-why="Adres jest, uścisku dłoni nie ma, a 30 sekund czekania to cisza: firewall, security group albo zła sieć.">TCP</button>
+      <button class="quiz__opt" data-why="Do TLS nie doszło — najpierw musiałoby się udać połączenie TCP.">TLS</button>
+      <button class="quiz__opt" data-why="Serwer nic nie powiedział — nie ma statusu ani FATAL.">Auth</button>
+      <button class="quiz__opt" data-why="Serwer nic nie powiedział — nie ma statusu ani FATAL.">Aplikacja</button>
+    </div>
+  </div>
+
+  <div class="quiz">
+    <p class="quiz__q"><span class="tag">03.2·2</span> <code>psql: error: connection to server at "10.0.3.17", port 5432 failed: FATAL:  no pg_hba.conf entry for host "10.0.9.4", user "etl", database "dwh"</code></p>
+    <div class="quiz__opts">
+      <button class="quiz__opt" data-why="Nazwa została rozwiązana — jest adres, a do tego odezwał się serwer.">DNS</button>
+      <button class="quiz__opt" data-why="TCP przeszło: FATAL to słowa Postgresa, więc rozmowa już trwała.">TCP</button>
+      <button class="quiz__opt" data-why="To nie problem certyfikatu — serwer ocenia tu Ciebie, a nie Ty jego.">TLS</button>
+      <button class="quiz__opt" data-correct data-why="FATAL = mówi serwer. Brak reguły w pg_hba.conf dla Twojego adresu (10.0.9.4) = nie wpuszcza Cię. Wg dokumentacji: „you succeed in contacting the server, but it does not want to talk to you”.">Auth</button>
+      <button class="quiz__opt" data-why="Nie doszło do pytania o bazę — serwer odprawił Cię przy drzwiach.">Aplikacja</button>
+    </div>
+  </div>
+
+  <div class="quiz">
+    <p class="quiz__q"><span class="tag">03.2·3</span> <code>curl: (60) SSL certificate problem: self-signed certificate</code></p>
+    <div class="quiz__opts">
+      <button class="quiz__opt" data-why="Serwer odpowiedział certyfikatem, więc adres był znany.">DNS</button>
+      <button class="quiz__opt" data-why="TCP przeszło — inaczej serwer nie zdążyłby pokazać certyfikatu.">TCP</button>
+      <button class="quiz__opt" data-correct data-why="Kod 60 i słowo certificate: Twój klient nie ufa certyfikatowi, który podpisał sam serwer, a nie zaufany urząd. Typowe dla wewnętrznych baz i API w firmie.">TLS</button>
+      <button class="quiz__opt" data-why="To Ty oceniasz serwer, nie on Ciebie — do hasła nie doszło.">Auth</button>
+      <button class="quiz__opt" data-why="Żadne żądanie jeszcze nie poleciało.">Aplikacja</button>
+    </div>
+  </div>
+
+  <div class="quiz">
+    <p class="quiz__q"><span class="tag">03.2·4</span> W <code>curl -v</code>: <code>&lt; HTTP/2 404</code></p>
+    <div class="quiz__opts">
+      <button class="quiz__opt" data-why="Strzałka &lt; to odpowiedź serwera — wszystkie niższe szczeble przeszły.">DNS</button>
+      <button class="quiz__opt" data-why="Strzałka &lt; to odpowiedź serwera — wszystkie niższe szczeble przeszły.">TCP</button>
+      <button class="quiz__opt" data-why="Strzałka &lt; to odpowiedź serwera — wszystkie niższe szczeble przeszły.">TLS</button>
+      <button class="quiz__opt" data-why="404 nie mówi nic o Twojej tożsamości; od tego są 401 i 403.">Auth</button>
+      <button class="quiz__opt" data-correct data-why="404 Not Found: serwer Cię obsłużył, ale takiego zasobu nie ma. Najczęściej literówka w ścieżce albo zła wersja API.">Aplikacja</button>
+    </div>
+  </div>
+
+  <div class="quiz">
+    <p class="quiz__q"><span class="tag">03.2·5</span> <code>psql: error: connection to server at "127.0.0.1", port 5433 failed: Connection refused</code></p>
+    <div class="quiz__opts">
+      <button class="quiz__opt" data-why="Adres 127.0.0.1 jest już podany — nie było czego rozwiązywać.">DNS</button>
+      <button class="quiz__opt" data-correct data-why="Odmowa natychmiast = nikt nie słucha na 5433. Wg dokumentacji to NIE jest odmowa Postgresa, tylko jądra. Sprawdź ss -tlnp: może baza stoi na 5432?">TCP</button>
+      <button class="quiz__opt" data-why="Do TLS nie doszło — połączenie TCP nie powstało.">TLS</button>
+      <button class="quiz__opt" data-why="Nie ma FATAL — Postgres nic nie powiedział.">Auth</button>
+      <button class="quiz__opt" data-why="Nie ma FATAL — Postgres nic nie powiedział.">Aplikacja</button>
+    </div>
+  </div>
+
+  <div class="quiz">
+    <p class="quiz__q"><span class="tag">03.2·6</span> <code>psql: error: could not translate host name "warehouse-db.internal" to address: Temporary failure in name resolution</code></p>
+    <div class="quiz__opts">
+      <button class="quiz__opt" data-correct data-why="translate host name to address = DNS. „Temporary” sugeruje, że resolver nie odpowiedział w ogóle — typowe w kontenerze bez dostępu do firmowego DNS albo poza VPN.">DNS</button>
+      <button class="quiz__opt" data-why="Nie ma jeszcze adresu, więc nie było gdzie pukać.">TCP</button>
+      <button class="quiz__opt" data-why="Nie ma jeszcze adresu, więc nie było gdzie pukać.">TLS</button>
+      <button class="quiz__opt" data-why="Serwer nic nie powiedział — nawet go nie znaleziono.">Auth</button>
+      <button class="quiz__opt" data-why="Serwer nic nie powiedział — nawet go nie znaleziono.">Aplikacja</button>
+    </div>
+  </div>
+
+  <div class="quiz">
+    <p class="quiz__q"><span class="tag">03.2·7</span> W <code>curl -v</code>: <code>&lt; HTTP/2 403</code></p>
+    <div class="quiz__opts">
+      <button class="quiz__opt" data-why="Odpowiedź serwera — niższe szczeble przeszły.">DNS</button>
+      <button class="quiz__opt" data-why="Odpowiedź serwera — niższe szczeble przeszły.">TCP</button>
+      <button class="quiz__opt" data-why="Odpowiedź serwera — niższe szczeble przeszły.">TLS</button>
+      <button class="quiz__opt" data-correct data-why="403 Forbidden: serwer wie, kim jesteś, i nie pozwala. W odróżnieniu od 401 ponowne logowanie tym samym tokenem nie pomoże — brakuje uprawnień.">Auth</button>
+      <button class="quiz__opt" data-why="Blisko — ale 403 dotyczy uprawnień, czyli tego, kim jesteś, nie tego, o co prosisz.">Aplikacja</button>
+    </div>
+  </div>
+
+  <div class="quiz">
+    <p class="quiz__q"><span class="tag">03.2·8</span> <code>psql: error: connection to server at "10.0.3.17", port 5432 failed: FATAL:  database "staging" does not exist</code></p>
+    <div class="quiz__opts">
+      <button class="quiz__opt" data-why="FATAL = mówi serwer, więc był znaleziony.">DNS</button>
+      <button class="quiz__opt" data-why="FATAL = mówi serwer, więc połączenie stało.">TCP</button>
+      <button class="quiz__opt" data-why="Problem nie dotyczy certyfikatu.">TLS</button>
+      <button class="quiz__opt" data-why="Serwer nie narzeka na Ciebie, tylko na nazwę bazy.">Auth</button>
+      <button class="quiz__opt" data-correct data-why="Serwer rozmawia, ale nie ma takiej bazy. Sprawdź ostatni segment connection stringa — i pamiętaj z dokumentacji: bez nazwy bazy Postgres przyjmuje nazwę użytkownika.">Aplikacja</button>
+    </div>
+  </div>
+
+  <div class="recall" data-hint="Pięć szczebli, pięć sposobów sprawdzenia. Na głos, zanim klikniesz.">
+    <p class="recall__q"><span class="tag">03.3</span> Połączenie z bazą nie działa. Wymień szczeble po kolei i przy każdym komendę albo miejsce, które go sprawdza.</p>
+    <div class="recall__a">
+      <b>1 DNS</b> — <code>dig nazwa</code> (czy jest odpowiedź w ANSWER SECTION)<br>
+      <b>2 TCP</b> — <code>nc -zv -w 3 host port</code> (succeeded / refused / cisza)<br>
+      <b>3 TLS</b> — <code>curl -v</code>, linie <code>* SSL</code> i <code>* Server certificate</code><br>
+      <b>4 Auth</b> — status <code>401/403</code> albo <code>FATAL: password…</code> / <code>no pg_hba.conf entry</code><br>
+      <b>5 Aplikacja</b> — status <code>404/500</code> albo <code>FATAL: database … does not exist</code><br>
+      Na 4–5 szczegóły często są tylko w <b>logu serwera</b>.
+    </div>
+  </div>
+
+  <h2>Zrób to w terminalu</h2>
+
+  <div class="task">
+    <h3><span class="tag">03.4</span> Wejdź po drabinie z <code>curl</code> i zobacz kody wyjścia</h3>
+<pre><code>curl https://nie-istnieje-xyz123.example-dne.com ; echo "kod: $?"
+curl http://127.0.0.1:5432 ; echo "kod: $?"
+curl https://expired.badssl.com ; echo "kod: $?"
+curl https://api.github.com/user ; echo "kod: $?"
+curl -f https://api.github.com/user ; echo "kod: $?"</code></pre>
+    <table>
+      <thead><tr><th>Element</th><th>Znaczy</th></tr></thead>
+      <tbody>
+        <tr><td><code>;</code></td><td>Separator komend: „potem wykonaj następną, niezależnie od wyniku". W przeciwieństwie do <code>|</code> niczego nie przekazuje.</td></tr>
+        <tr><td><code>echo</code></td><td>Wypisz tekst na ekran (<i>echo</i> — echo, powtórz).</td></tr>
+        <tr><td><code>$?</code></td><td>Kod wyjścia <b>poprzedniej</b> komendy. <code>$</code> = „wartość zmiennej", <code>?</code> = nazwa tej specjalnej zmiennej.</td></tr>
+        <tr><td><code>-f</code></td><td><code>--fail</code>: status HTTP ≥ 400 traktuj jako błąd (kod 22).</td></tr>
+        <tr><td><code>badssl.com</code></td><td>Publiczny poligon z celowo zepsutymi certyfikatami. Zajrzyj na <a href="https://badssl.com/">badssl.com</a> — jest ich kilkanaście rodzajów.</td></tr>
+      </tbody>
+    </table>
+    <p class="note" style="margin:0">
+      Przed każdą linią przewiduj: <b>który szczebel i jaki kod?</b> Zapisz przewidywanie, zanim naciśniesz Enter — wkleisz je w odpowiedzi <b>03.4</b>.
+      Czwarta linia wypisze body z <code>Requires authentication</code> — i kod <code>0</code>.
+    </p>
+  </div>
+
+  <div class="task">
+    <h3><span class="tag">03.5</span> Postaw bazę, na którą wolno Ci się wywracać</h3>
+    <p style="font-size:.95rem">Masz już obraz <code>postgres:18</code>, więc nic nie pobierzesz. To jest Twój środowiskowy chleb powszedni z pracy:</p>
+<pre><code>docker run -d --rm --name lekcja03-pg -e POSTGRES_PASSWORD=sekret -p 127.0.0.1:55432:5432 postgres:18</code></pre>
+    <table>
+      <thead><tr><th>Element</th><th>Rozwinięcie</th><th>Co robi</th></tr></thead>
+      <tbody>
+        <tr><td><code>run</code></td><td>—</td><td>Utwórz kontener z obrazu i uruchom go.</td></tr>
+        <tr><td><code>-d</code></td><td><code>--detach</code></td><td>Odłącz od terminala — baza chodzi w tle jako <a href="../reference/glossary.html#daemon">daemon</a>.</td></tr>
+        <tr><td><code>--rm</code></td><td><i>remove</i></td><td>Po zatrzymaniu usuń kontener. Nic po sobie nie zostawisz.</td></tr>
+        <tr><td><code>--name</code></td><td>—</td><td>Nazwa, po której będziesz się do niego odwoływał.</td></tr>
+        <tr><td><code>-e</code></td><td><code>--env</code></td><td>Zmienna środowiskowa w kontenerze. Obraz Postgresa czyta z niej hasło superużytkownika.</td></tr>
+        <tr><td><code>-p</code></td><td><code>--publish</code></td><td><b><code>adres:port_hosta:port_kontenera</code></b>. Czyli: wystaw port 5432 z kontenera jako <code>55432</code>, <b>tylko na pętli zwrotnej</b>. To jest decyzja z lekcji 01 — bez <code>127.0.0.1:</code> Docker wystawiłby bazę na <code>0.0.0.0</code>.</td></tr>
+        <tr><td><code>postgres:18</code></td><td><i>obraz:tag</i></td><td>Który obraz i która wersja.</td></tr>
+      </tbody>
+    </table>
+    <p>Teraz wspinaj się i obserwuj, <b>kto mówi</b>:</p>
+<pre><code>ss -tlnp | grep 55432                                       <span class="cmt"># czy Twoje -p stało się Local Address?</span>
+pg_isready -h 127.0.0.1 -p 55432 ; echo "kod: $?"           <span class="cmt"># szczebel 2 dla Postgresa</span>
+psql "postgresql://postgres:zlehaslo@127.0.0.1:55432/postgres" -c 'select 1'
+psql "postgresql://etl:x@127.0.0.1:55432/postgres" -c 'select 1'
+psql "postgresql://postgres:sekret@127.0.0.1:55432/hurtownia" -c 'select 1'
+psql "postgresql://postgres:sekret@127.0.0.1:55432/postgres" -c 'select 1'   <span class="cmt"># szczyt drabiny</span></code></pre>
+    <table>
+      <thead><tr><th>Element</th><th>Znaczy</th></tr></thead>
+      <tbody>
+        <tr><td><code>pg_isready</code></td><td>„Czy PostgreSQL gotowy?" <code>man pg_isready</code>: kod <code>0</code> = przyjmuje połączenia, <code>1</code> = odrzuca (np. startuje), <code>2</code> = <b>brak odpowiedzi</b>, <code>3</code> = nie próbowano (złe parametry). Nie potrzebuje hasła.</td></tr>
+        <tr><td><code>-h</code> / <code>-p</code></td><td><code>--host</code> / <code>--port</code>. Uwaga: w <code>ss</code> <code>-p</code> znaczyło <i>processes</i> — każda komenda ma własny słownik liter.</td></tr>
+        <tr><td><code>psql</code></td><td><i>PostgreSQL interactive terminal</i>. Connection string rozkładasz już z <a href="../reference/adres-polaczenia.html">ściągi z lekcji 01</a>.</td></tr>
+        <tr><td><code>-c</code></td><td><code>--command</code>: wykonaj to jedno polecenie i wyjdź.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="task">
+    <h3><span class="tag">03.6</span> Przeczytaj, co serwer przed Tobą ukrył — i posprzątaj</h3>
+<pre><code>docker logs lekcja03-pg 2&gt;&amp;1 | tail -8
+docker stop lekcja03-pg</code></pre>
+    <p class="note" style="margin:0">
+      <code>docker logs</code> = wszystko, co baza wypisała do swojego <a href="../reference/glossary.html#stdout">stdout/stderr</a>.
+      <code>tail -8</code> = pokaż 8 ostatnich linii (<i>tail</i> — ogon pliku).
+      <b><code>2&gt;&amp;1</code> jest tu konieczne</b>: Postgres pisze log do <code>stderr</code>, a <code>|</code> przepuszcza tylko <code>stdout</code> —
+      bez tego <code>tail</code> dostałby pustkę. To ta pułapka z glosariusza, pierwszy raz na żywo. Znajdź <code>DETAIL: Role "etl" does not exist</code>
+      i linię z <code>pg_hba.conf</code> — ten plik będzie bohaterem lekcji o wystawianiu bazy.
+      Po <code>stop</code> kontener znika sam dzięki <code>--rm</code>. Sprawdź: <code>nc -zv 127.0.0.1 55432</code> — jaki szczebel teraz?
+    </p>
+  </div>
+
+  <section class="respond">
+    <h2>Odpowiedz w czacie</h2>
+    <p class="note" style="margin:.2rem 0 .6rem">Wklej odpowiedzi po numerach. Nie musisz odpowiadać ładnie — surowe wyniki z terminala są najcenniejsze. Zapiszę je w repo.</p>
+    <ol class="respond__list">
+      <li><span class="respond__id">03.1</span> <b>Z pamięci</b> — kto wysłał <code>&gt; User-Agent</code> i po czym to poznajesz? Twoja odpowiedź <i>zanim</i> kliknąłeś „Pokaż".</li>
+      <li><span class="respond__id">03.2</span> <b>Trening</b> — wynik z licznika (x/8) i numery pytań, w których się pomyliłeś lub zgadywałeś.</li>
+      <li><span class="respond__id">03.3</span> <b>Z pamięci</b> — pięć szczebli i komenda do każdego, zanim kliknąłeś „Pokaż".</li>
+      <li><span class="respond__id">03.4</span> <b>Terminal</b> — dla każdej z pięciu linii <code>curl</code>: przewidywany szczebel i kod → faktyczny kod.</li>
+      <li><span class="respond__id">03.5</span> <b>Terminal</b> — wynik <code>ss -tlnp | grep 55432</code>, kod <code>pg_isready</code>, a dla każdego z czterech <code>psql</code>: szczebel i kto mówi.</li>
+      <li><span class="respond__id">03.6</span> <b>Terminal</b> — linia <code>DETAIL</code> z logu i szczebel, który pokazał <code>nc -zv 127.0.0.1 55432</code> po <code>docker stop</code>.
+        Dodatkowo: co się stanie, jeśli uruchomisz <code>docker logs</code> <b>bez</b> <code>2&gt;&amp;1</code>? Przewidź, potem sprawdź.</li>
+      <li><span class="respond__id">03.7</span> <b>Ćwiczenie umysłowe</b> — w Airflow codziennie o 6:00 chodzi task
+        <code>curl -s https://api.crm.example/v1/orders -o orders.json</code>, a potem ładowanie <code>orders.json</code> do hurtowni.
+        Token do API wygasł w nocy.
+        <ol>
+          <li>Jakiego koloru będzie task <code>curl</code> w Airflow i dlaczego?</li>
+          <li>Co trafi do hurtowni?</li>
+          <li>Jedna zmiana w tej komendzie, po której awaria będzie widoczna — i jaki kod wyjścia wtedy dostaniesz?</li>
+        </ol></li>
+      <li><span class="respond__id">03.8</span> <b>Ćwiczenie umysłowe</b> — własnymi słowami: dlaczego Postgres na nieistniejącego użytkownika odpowiada tak samo jak na złe hasło? Co wspólnego ma to z portem 444 GitHuba?</li>
+      <li><span class="respond__id">03.9</span> <b>Refleksja</b> — pytania, zaskoczenia, co było niejasne, co najciekawsze.</li>
+    </ol>
+  </section>
+
+  <div class="source">
+    <span class="label">Źródło do przeczytania</span>
+    <a href="https://www.postgresql.org/docs/current/server-start.html#CLIENT-CONNECTION-PROBLEMS">PostgreSQL: Client Connection Problems</a>
+    i <a href="https://www.postgresql.org/docs/current/client-authentication-problems.html">Authentication Problems</a>.
+    Razem to dwa ekrany tekstu, pisane przez autorów Postgresa, i pokrywają szczeble 2, 4 i 5 dla bazy,
+    z którą najczęściej będziesz się łączył. Czytaj je z wynikiem z własnego terminala obok — i zauważ, gdzie dokumentacja
+    (<code>user does not exist</code>) rozjeżdża się z tym, co widzi klient.
+    <br><br>
+    Do tła: <a href="https://hpbn.co/transport-layer-security-tls/#encryption-authentication-and-integrity">HPBN — TLS: encryption, authentication, integrity</a>
+    (po co w ogóle szczebel 3) oraz sekcja <b>EXIT CODES</b> w <code>man curl</code> — pełna lista kodów, z których dziś widziałeś 6, 7, 22, 28 i 60.
+  </div>
+
+  <div class="ask">
+    <b>Przynieś własny błąd.</b> Najlepsze ćwiczenie do tej lekcji jest poza nią: następnym razem, gdy w pracy
+    potok, kontener albo Airflow wyrzuci błąd połączenia, wklej go w czacie razem ze swoją
+    diagnozą szczebla. Rozbierzemy go razem. I pytaj o wszystko, co tu niejasne — jestem Twoim nauczycielem, nie encyklopedią.
+  </div>
+
+  <nav class="nav">
+    <a href="0002-komendy-litera-po-literze.html">&larr; Lekcja 02: Komendy litera po literze</a>
+    <a href="../reference/drabina-bledow.html">Ściąga: drabina błędów &rarr;</a>
+    <a href="../reference/glossary.html">Glosariusz pojęć</a>
+    <a href="../reference/komendy-diagnostyczne.html">Ściąga: komendy i flagi</a>
+    <a href="0004-kto-odpowiada-na-nazwe.html">Lekcja 04: Kto odpowiada na nazwę &rarr;</a>
+  </nav>
+
+</main>
+<script src="../assets/quiz.js"></script>
+</body>
+</html>

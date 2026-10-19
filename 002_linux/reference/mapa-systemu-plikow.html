@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mapa systemu plików</title>
+<link rel="stylesheet" href="../../assets/lesson.css">
+</head>
+<body>
+<main class="page">
+<p class="eyebrow">Linux · Ściąga</p>
+<h1>Mapa systemu plików</h1>
+<p class="subtitle">Jedno drzewo od <code>/</code>. Ten sam układ na laptopie, w WSL, w kontenerze i w chmurze (standard FHS).</p>
+
+<h2>Katalogi</h2>
+<table>
+  <thead><tr><th>Katalog</th><th>Co tam jest</th><th>Przykład</th></tr></thead>
+  <tbody>
+    <tr><td><code>/</code></td><td>korzeń — początek wszystkiego</td><td></td></tr>
+    <tr><td><code>~</code> = <code>/home/&lt;ja&gt;</code></td><td>moje pliki i ustawienia</td><td>repo, <code>.env</code>, <code>~/.aws</code>, <code>~/.bashrc</code></td></tr>
+    <tr><td><code>/etc</code></td><td>konfiguracja systemu i usług</td><td><code>/etc/hosts</code>, <code>/etc/resolv.conf</code></td></tr>
+    <tr><td><code>/var/log</code></td><td>logi (rotowane: <code>.1</code>, <code>.2.gz</code>…)</td><td><code>auth.log</code> — logowania, <code>sudo</code></td></tr>
+    <tr><td><code>/tmp</code></td><td>tymczasowe, mogą zniknąć przy restarcie</td><td>pośredni CSV</td></tr>
+    <tr><td><code>/opt</code></td><td>aplikacje instalowane w całości</td><td><code>/opt/airflow/{dags,logs,config,plugins}</code> w kontenerze</td></tr>
+    <tr><td><code>/usr/bin</code></td><td>programy-komendy</td><td><code>ls</code>, <code>curl</code>, <code>dig</code></td></tr>
+    <tr><td><code>/mnt</code></td><td>punkty montowania</td><td>WSL: <code>/mnt/c</code> = dysk <code>C:</code></td></tr>
+    <tr><td><code>/root</code></td><td>dom administratora (≠ korzeń)</td><td></td></tr>
+  </tbody>
+</table>
+
+<h2>Ścieżki</h2>
+<table>
+  <tbody>
+    <tr><td><code>/var/log</code></td><td><b>bezwzględna</b> — od korzenia, działa skądkolwiek</td></tr>
+    <tr><td><code>log</code>, <code>./dags</code></td><td><b>względna</b> — od katalogu roboczego</td></tr>
+    <tr><td><code>.</code></td><td>tu, gdzie stoję</td></tr>
+    <tr><td><code>..</code></td><td>rodzic (poziom wyżej)</td></tr>
+    <tr><td><code>~</code></td><td>mój katalog domowy</td></tr>
+    <tr><td><code>.nazwa</code></td><td>plik ukryty — widoczny dopiero z <code>ls -a</code></td></tr>
+    <tr><td><code>/etc</code> ≠ <code>/Etc</code></td><td>Linux rozróżnia wielkość liter (Windows nie)</td></tr>
+  </tbody>
+</table>
+
+<h2>Komendy</h2>
+<table>
+  <thead><tr><th>Komenda</th><th>Rozwinięcie</th><th>Co robi</th></tr></thead>
+  <tbody>
+    <tr><td><code>pwd</code></td><td><em>print working directory</em></td><td>gdzie stoję</td></tr>
+    <tr><td><code>ls [ścieżka]</code></td><td><em>list</em></td><td>zawartość katalogu (bez argumentu: roboczego)</td></tr>
+    <tr><td><code>ls -a</code></td><td><code>-a</code> = <em>all</em></td><td>także pliki ukryte, oraz <code>.</code> i <code>..</code></td></tr>
+    <tr><td><code>cd ścieżka</code></td><td><em>change directory</em></td><td>zmień katalog roboczy; cisza = sukces</td></tr>
+    <tr><td><code>cd</code> / <code>cd ~</code></td><td></td><td>do domu</td></tr>
+    <tr><td><code>cat plik</code></td><td><em>concatenate</em></td><td>wypisz treść pliku</td></tr>
+    <tr><td><code>echo $?</code></td><td></td><td>kod wyjścia ostatniej komendy (0 = OK; <code>ls</code>: 2 = nie ma takiej ścieżki)</td></tr>
+    <tr><td><code>man hier</code></td><td><em>manual, hierarchy</em></td><td>opis katalogów systemu</td></tr>
+  </tbody>
+</table>
+
+<p class="note">Źródła: <a href="https://linuxcommand.org/lc3_lts0040.php">Shotts — A Guided Tour</a> ·
+<a href="https://refspecs.linuxfoundation.org/FHS_3.0/fhs/index.html">FHS 3.0</a> ·
+<a href="https://learn.microsoft.com/en-us/windows/wsl/filesystems">WSL — Working across file systems</a> ·
+<a href="https://airflow.apache.org/docs/apache-airflow/3.2.2/howto/docker-compose/index.html">Airflow 3.2.2 w Dockerze</a>.
+Lekcja: <a href="../lessons/0001-gdzie-co-lezy.html">01 · Gdzie co leży</a>.</p>
+</main>
+</body>
+</html>

@@ -1,0 +1,19 @@
+lesson 1
+
+dig +short api.github.com
+140.82.121.5
+
+ss -tlnp
+State             Recv-Q            Send-Q                        Local Address:Port                          Peer Address:Port            Process                                      
+LISTEN            0                 4096                             127.0.0.54:53                                 0.0.0.0:*                                                            
+LISTEN            0                 511                               127.0.0.1:45090                              0.0.0.0:*                users:(("code",pid=18184,fd=57))            
+LISTEN            0                 4096                              127.0.0.1:631                                0.0.0.0:*                                                            
+LISTEN            0                 4096                          127.0.0.53%lo:53                                 0.0.0.0:*                                                            
+LISTEN            0                 4096                                  [::1]:631                                   [::]:*    
+
+
+nc -zv api.github.com 443
+Connection to api.github.com (140.82.121.5) 443 port [tcp/https] succeeded!
+
+nc -zv api.github.com 444
+timeout. Nie zwraca failed, ani odmowy dostępu, żeby nie było wiadomo, że coś za tym jest. Firewall połyka połączenie

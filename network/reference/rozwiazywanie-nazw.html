@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rozwiązywanie nazw</title>
+<link rel="stylesheet" href="../assets/lesson.css">
+<link rel="stylesheet" href="../assets/chain.css">
+<style>
+  /* Ściąga: ma się zmieścić na jednej kartce. */
+  .page { max-width: 50rem; padding-top: 2.2rem; }
+  h2 { margin: 1.8rem 0 .7rem; padding-top: .8rem; }
+  table { font-size: .78rem; margin-bottom: 1rem; }
+  th, td { padding: .4rem .55rem; }
+  td code { font-size: .9em; }
+  .link { padding: .45rem .8rem; margin-bottom: 1.3rem; }
+  .link:not(:last-child)::after { bottom: -1.2rem; }
+  @media print { body { font-size: 9pt; } h1 { font-size: 20pt; } }
+</style>
+</head>
+<body>
+<main class="page">
+
+  <p class="eyebrow">Ściąga &middot; Sieci dla inżyniera danych</p>
+  <h1>Rozwiązywanie nazw</h1>
+  <p class="subtitle">Kto zamienia host z connection stringa na adres — i gdzie to sprawdzić.</p>
+
+  <div class="note">
+    <b>Reguła.</b> Nazwę rozwiązuje <b>maszyna, na której działa program</b> — nie ta, przy której siedzisz.
+    Kontener ma własny łańcuch, laptop własny.<br>
+    <b>Narzędzie.</b> <code>getent hosts nazwa</code> pyta tak jak <code>psql</code>/<code>curl</code>. <code>dig</code> pyta tylko serwer DNS.
+  </div>
+
+  <h2>Łańcuch w Linuksie (Twój laptop)</h2>
+  <ol class="chain">
+    <li class="link"><p class="link__who">program <span>psql, curl, sterownik</span></p>
+      <p class="link__what">Prosi bibliotekę systemową (<code>getaddrinfo</code>) o adres.</p></li>
+    <li class="link link--skip"><p class="link__who"><code>/etc/nsswitch.conf</code> <span>kolejność źródeł</span></p>
+      <p class="link__proof"><code>hosts: files mdns4_minimal [NOTFOUND=return] dns</code> · <code>files</code> = /etc/hosts, <code>dns</code> = resolv.conf</p></li>
+    <li class="link link--skip"><p class="link__who"><code>/etc/hosts</code> <span>plik: adres nazwa</span></p>
+      <p class="link__proof"><code>127.0.1.1 LEGION</code> · <code>127.0.0.1 localhost</code></p></li>
+    <li class="link"><p class="link__who"><code>/etc/resolv.conf</code> <span>do kogo wysłać pytanie DNS</span></p>
+      <p class="link__proof">laptop: <code>127.0.0.53</code> (systemd-resolved) · kontener w sieci użytkownika: <code>127.0.0.11</code> (DNS Dockera)</p></li>
+    <li class="link"><p class="link__who">serwer DNS i dalej <span>router → resolver rekurencyjny → autorytatywny</span></p>
+      <p class="link__proof"><code>resolvectl status</code> → <code>DNS Servers: 192.168.1.1</code></p></li>
+  </ol>
+
+  <h2>Komendy</h2>
+  <table>
+    <thead><tr><th>Komenda</th><th>Rozwinięcie</th><th>Pyta</th><th>Kod wyjścia</th></tr></thead>
+    <tbody>
+      <tr><td><code>getent hosts nazwa</code></td><td><i>get entries</i>, baza <code>hosts</code></td><td>Cały łańcuch NSS — <b>to, co zobaczy program</b></td><td><code>0</code> znaleziono · <code>2</code> nie znaleziono</td></tr>
+      <tr><td><code>dig nazwa</code></td><td><i>domain information groper</i></td><td>Tylko serwer DNS z <code>resolv.conf</code></td><td><code>0</code> <b>nawet przy NXDOMAIN</b> · <code>9</code> brak odpowiedzi</td></tr>
+      <tr><td><code>dig @1.1.1.1 nazwa</code></td><td><code>@</code> = „u kogo"</td><td>Wskazany serwer, z pominięciem lokalnego</td><td>jak wyżej</td></tr>
+      <tr><td><code>cat /etc/resolv.conf</code></td><td><i>concatenate</i></td><td>—</td><td>Pokazuje <code>nameserver</code>: kogo pyta ta maszyna</td></tr>
+      <tr><td><code>resolvectl status</code></td><td><i>resolve control</i></td><td>—</td><td>Prawdziwe serwery DNS za <code>127.0.0.53</code></td></tr>
+      <tr><td><code>docker exec K getent hosts nazwa</code></td><td><i>execute</i> w kontenerze K</td><td>Łańcuch <b>kontenera</b></td><td>jak <code>getent</code></td></tr>
+    </tbody>
+  </table>
+
+  <h2>Docker i Compose</h2>
+  <table>
+    <thead><tr><th>Skąd łączy się program</th><th>Host w connection stringu</th><th>Port</th></tr></thead>
+    <tbody>
+      <tr><td>Kontener w tej samej sieci compose / user-defined</td><td><b>nazwa serwisu</b> (<code>pgdatabase</code>, <code>db</code>)</td><td><b>port kontenera</b> (prawa strona <code>ports</code>)</td></tr>
+      <tr><td>Laptop (host)</td><td><code>localhost</code></td><td><b>port hosta</b> (lewa strona <code>ports</code>)</td></tr>
+      <tr><td>Kontener z <code>docker run</code> bez <code>--network</code></td><td>nazwy serwisów <b>nie działają</b> (domyślny <code>bridge</code>, publiczny DNS)</td><td>—</td></tr>
+      <tr><td>Kontener → <code>localhost</code></td><td>to <b>ten sam kontener</b>, nie laptop i nie baza</td><td>zwykle <code>Connection refused</code></td></tr>
+    </tbody>
+  </table>
+  <p class="note">
+    <code>ports: "5433:5432"</code> = <code>HOST:KONTENER</code>. <i>„The host port is only used when accessing the service from outside the network"</i>
+    — <a href="https://docs.docker.com/compose/how-tos/networking/">Docker: Networking in Compose</a>.
+    DNS Dockera: <a href="https://docs.docker.com/engine/network/#dns-services">Docker: DNS services</a>.
+  </p>
+
+  <h2>Typowe komunikaty (szczebel 1)</h2>
+  <table>
+    <tbody>
+      <tr><td><code>could not translate host name "db" to address: Temporary failure in name resolution</code></td><td>psql: nazwy nie zna łańcuch <b>tej</b> maszyny. Najczęściej: nazwa z compose użyta poza siecią compose.</td></tr>
+      <tr><td><code>curl: (6) Could not resolve host</code></td><td>to samo w curl.</td></tr>
+      <tr><td><code>status: NXDOMAIN</code> w <code>dig</code></td><td>serwer DNS: nie ma takiej nazwy. Kod wyjścia i tak <code>0</code>.</td></tr>
+    </tbody>
+  </table>
+
+  <nav class="nav">
+    <a href="../lessons/0004-kto-odpowiada-na-nazwe.html">&larr; Lekcja 04</a>
+    <a href="drabina-bledow.html">Ściąga: drabina błędów</a>
+    <a href="komendy-diagnostyczne.html">Ściąga: komendy i flagi</a>
+    <a href="glossary.html">Glosariusz</a>
+  </nav>
+
+</main>
+</body>
+</html>

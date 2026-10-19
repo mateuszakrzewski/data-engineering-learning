@@ -1,0 +1,327 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gdzie co leży</title>
+<link rel="stylesheet" href="../../assets/lesson.css">
+<link rel="stylesheet" href="../../assets/quiz.css">
+</head>
+<body>
+<main class="page">
+
+<p class="eyebrow">Linux 01 · System plików</p>
+<h1>Gdzie co leży</h1>
+<p class="subtitle">Jedno drzewo katalogów, osiem miejsc, które warto znać, i pliki, których nie widać.</p>
+
+<div class="goal">
+  <strong>Twoja wygrana po tej lekcji</strong>
+  Gdy ktoś powie „sprawdź config", „zajrzyj do logów" albo „DAG-i leżą w kontenerze", wiesz, w którym katalogu szukać —
+  i umiesz tam dojść w terminalu, pokazując też pliki ukryte, takie jak <code>.env</code> czy <code>.aws</code>.
+</div>
+
+<h2>Na czym ta lekcja się opiera</h2>
+<p>Zakładam tylko jedno: umiesz otworzyć terminal, wpisać komendę i nacisnąć Enter. Wszystko inne wyjaśniam po drodze.</p>
+<p><strong>Terminal</strong> to okno, w którym piszesz. <strong>Powłoka</strong> (<em>shell</em>) to program działający w tym oknie:
+czyta to, co wpiszesz, uruchamia odpowiedni program i pokazuje jego wynik. U Ciebie (Ubuntu i WSL) powłoką jest
+<strong>bash</strong> — od <em>Bourne Again SHell</em>. Zanim cokolwiek wpiszesz, bash pokazuje <strong>znak zachęty</strong> (<em>prompt</em>), na przykład:</p>
+<pre><code>rejtan@LEGION:~$</code></pre>
+<p>Czytamy go tak: <code>rejtan</code> — kim jesteś (nazwa użytkownika), <code>LEGION</code> — na jakiej maszynie,
+<code>~</code> — w którym katalogu teraz stoisz (o znaku <code>~</code> za chwilę), <code>$</code> — „czekam na komendę, działasz jako zwykły użytkownik".</p>
+
+<h2>1. Jedno drzewo, jeden korzeń</h2>
+<p><strong>Plik</strong> to nazwany kawałek danych na dysku: CSV z zamówieniami, skrypt, config. <strong>Katalog</strong> (<em>directory</em>) to
+to samo, co folder w Windows: pojemnik na pliki i inne katalogi.</p>
+<p>W Windows każdy dysk ma osobne drzewo: <code>C:\</code>, <code>D:\</code>. W Linuksie <strong>drzewo jest jedno</strong>. Zaczyna się od katalogu
+o nazwie <code>/</code>, który nazywamy <strong>korzeniem</strong> (<em>root directory</em>). Wszystko — Twoje pliki, configi, logi, a nawet
+inne dyski — jest gdzieś pod nim
+(<a href="https://linuxcommand.org/lc3_lts0020.php">Shotts, „Navigation"</a>).</p>
+<p><strong>Ścieżka</strong> (<em>path</em>) to adres pliku w tym drzewie: nazwy kolejnych katalogów oddzielone ukośnikiem <code>/</code>.
+Ścieżka <code>/var/log/auth.log</code> znaczy: „od korzenia, wejdź do <code>var</code>, potem do <code>log</code>, tam jest plik <code>auth.log</code>".
+Ten sam znak <code>/</code> pełni więc dwie role: na samym początku oznacza korzeń, a w środku oddziela nazwy.</p>
+<pre><code>/                      <span class="cmt">← korzeń: tu zaczyna się wszystko</span>
+├── home/
+│   └── rejtan/        <span class="cmt">← Twój katalog domowy</span>
+├── etc/
+│   └── hosts          <span class="cmt">← plik (nie katalog)</span>
+└── var/
+    └── log/
+        └── auth.log</code></pre>
+
+<p>W każdej chwili powłoka „stoi" w jednym katalogu. Nazywa się on <strong>katalogiem roboczym</strong> (<em>working directory</em>).
+To od niego zależy, co zobaczysz, gdy poprosisz o listę plików bez podawania, gdzie.</p>
+
+<div class="task">
+  <h3>Gdzie teraz stoję?</h3>
+<pre><code>pwd</code></pre>
+  <p><strong>Co robi:</strong> <code>pwd</code> = <em>print working directory</em> — wypisz katalog roboczy. Nie ma flag, które musisz znać.</p>
+  <p><strong>Na co patrzeć:</strong> jedna linia, ścieżka zaczynająca się od <code>/</code>.</p>
+  <p><strong>Czego się spodziewać</strong> (świeży terminal):</p>
+<pre><code>/home/rejtan</code></pre>
+  <p>To Twój <strong>katalog domowy</strong> (<em>home directory</em>): miejsce, w którym każdy użytkownik trzyma swoje pliki i ustawienia.
+  Bash skraca go w znaku zachęty do <code>~</code> (tylda). <code>~</code> i <code>/home/rejtan</code> to dla Ciebie to samo miejsce.</p>
+</div>
+
+<div class="task">
+  <h3>Co jest pod korzeniem?</h3>
+<pre><code>ls /</code></pre>
+  <p><strong>Co robi:</strong> <code>ls</code> = <em>list</em> — wypisz zawartość katalogu. Argument <code>/</code> mówi, którego: korzenia.
+  Bez argumentu <code>ls</code> pokazałby katalog roboczy.</p>
+  <p><strong>Na co patrzeć:</strong> szukaj nazw z tabeli w części 2: <code>home</code>, <code>etc</code>, <code>var</code>, <code>tmp</code>, <code>opt</code>, <code>usr</code>, <code>mnt</code>.
+  Kolory zależą od typu: katalogi zwykle na niebiesko.</p>
+  <p><strong>Czego się spodziewać</strong> (tak wygląda to na LEGION, Ubuntu 24.04):</p>
+<pre><code>bin                boot   dev  home  lib64              media  opt   root  sbin                 snap  swap.img  tmp  var
+bin.usr-is-merged  cdrom  etc  lib   lib.usr-is-merged  lost+found  mnt  proc  run  sbin.usr-is-merged  srv  sys  usr</code></pre>
+  <p class="note">Nazwy z <code>.usr-is-merged</code> to ślad po porządkach w samym Ubuntu — pomiń je. W WSL lista będzie podobna, ale nie identyczna.</p>
+</div>
+
+<h2>2. Osiem miejsc, które warto znać</h2>
+<p>Układ katalogów nie jest przypadkowy. Opisuje go standard <strong>FHS</strong> (<em>Filesystem Hierarchy Standard</em>), którego trzymają się
+dystrybucje Linuksa (<a href="https://refspecs.linuxfoundation.org/FHS_3.0/fhs/index.html">FHS 3.0</a>; skrót masz też w <code>man hier</code>,
+od <em>hierarchy</em>). Dzięki temu ta sama mapa działa na Twoim laptopie, w WSL, w kontenerze i na maszynie w chmurze.
+Z ponad dwudziestu katalogów pod <code>/</code> na start potrzebujesz ośmiu:</p>
+
+<table>
+  <thead><tr><th>Katalog</th><th>Co tam leży</th><th>Przykład z Twojej pracy</th></tr></thead>
+  <tbody>
+    <tr><td><code>/home/rejtan</code> = <code>~</code></td><td>Twoje pliki i ustawienia</td><td>repo projektu, <code>.env</code>, klucze AWS w <code>~/.aws</code></td></tr>
+    <tr><td><code>/etc</code></td><td>Konfiguracja systemu i usług (wymawiane „et-see"; dawniej <em>et cetera</em>)</td><td><code>/etc/hosts</code> — znasz go z lekcji sieci 04</td></tr>
+    <tr><td><code>/var/log</code></td><td>Logi systemu i usług. <code>var</code> = <em>variable</em>, dane, które się ciągle zmieniają</td><td><code>auth.log</code>: kto się logował i kto użył <code>sudo</code></td></tr>
+    <tr><td><code>/tmp</code></td><td>Pliki tymczasowe; system może je skasować bez ostrzeżenia, np. przy restarcie</td><td>pośredni zrzut CSV przed wysyłką do S3</td></tr>
+    <tr><td><code>/opt</code></td><td>Dodatkowe aplikacje instalowane „w całości" (<em>optional</em>)</td><td>Airflow w Dockerze: <code>/opt/airflow/dags</code>, <code>/opt/airflow/logs</code></td></tr>
+    <tr><td><code>/usr/bin</code></td><td>Programy, które uruchamiasz komendami (<code>bin</code> = <em>binaries</em>)</td><td>tu leżą <code>ls</code>, <code>curl</code>, <code>dig</code></td></tr>
+    <tr><td><code>/mnt</code></td><td>Punkty montowania: miejsca, w które „wpina się" inny dysk</td><td>w WSL: <code>/mnt/c</code> = dysk <code>C:</code> z Windows</td></tr>
+    <tr><td><code>/root</code></td><td>Katalog domowy administratora (użytkownika <code>root</code>) — nie mylić z korzeniem <code>/</code></td><td>zwykle nie masz tu wstępu</td></tr>
+  </tbody>
+</table>
+<p class="note"><b>Montowanie</b> (<em>mount</em>) to podpięcie całego dysku albo zasobu pod wybrany katalog drzewa. Dlatego w Linuksie nie ma liter
+dysków: dysk <code>C:</code> nie dostaje własnego drzewa, tylko pojawia się jako katalog <code>/mnt/c</code>.
+<b>Airflow:</b> oficjalny <code>docker-compose.yaml</code> dla 3.2.2 podpina Twoje lokalne katalogi <code>./dags</code>, <code>./logs</code>, <code>./config</code>,
+<code>./plugins</code> pod <code>/opt/airflow/…</code> w kontenerze
+(<a href="https://airflow.apache.org/docs/apache-airflow/3.2.2/howto/docker-compose/index.html">Airflow 3.2.2 — Running Airflow in Docker</a>).
+Kontener ma własne drzewo z własnym korzeniem — więcej o tym w bloku Docker.</p>
+
+<div class="task">
+  <h3>Plik konfiguracyjny, który już znasz</h3>
+<pre><code>cat /etc/hosts</code></pre>
+  <p><strong>Co robi:</strong> <code>cat</code> = <em>concatenate</em> (sklejanie). Służy do sklejania kilku plików, ale z jednym plikiem
+  po prostu wypisuje jego treść na ekran. Ścieżka <code>/etc/hosts</code>: od korzenia, katalog <code>etc</code>, plik <code>hosts</code>.</p>
+  <p><strong>Na co patrzeć:</strong> pierwsze dwie linie — adres IP, potem nazwa.</p>
+  <p><strong>Czego się spodziewać:</strong></p>
+<pre><code>127.0.0.1 localhost
+127.0.1.1 LEGION
+<span class="cmt">… (dalej linie dla IPv6)</span></code></pre>
+  <p>To ten sam plik, z którego <code>getent hosts LEGION</code> wziął <code>127.0.1.1</code> w lekcji sieci 04. Teraz wiesz, dlaczego leży w <code>/etc</code>:
+  to konfiguracja tej maszyny.</p>
+</div>
+
+<div class="task">
+  <h3>Gdzie system trzyma logi</h3>
+<pre><code>ls /var/log</code></pre>
+  <p><strong>Co robi:</strong> wypisuje zawartość katalogu <code>/var/log</code>.</p>
+  <p><strong>Na co patrzeć:</strong> pliki, które powtarzają się z końcówkami <code>.1</code>, <code>.2.gz</code>, <code>.3.gz</code>.</p>
+  <p><strong>Czego się spodziewać</strong> (fragment):</p>
+<pre><code>auth.log      auth.log.1    auth.log.2.gz   auth.log.3.gz   auth.log.4.gz
+apt           boot.log      cups            dmesg           …</code></pre>
+  <p>To <strong>rotacja logów</strong>: żeby log nie rósł bez końca, system co jakiś czas zmienia nazwę bieżącego pliku na <code>.1</code>,
+  starsze kompresuje (<code>.gz</code> = spakowany <em>gzip</em>) i zaczyna nowy. Najświeższe wpisy są zawsze w pliku bez numeru —
+  tak samo, jak w rotowanych logach usług, które kiedyś będziesz przeglądać.</p>
+</div>
+
+<h2>3. Ścieżka bezwzględna i względna</h2>
+<p>Ścieżkę można podać na dwa sposoby:</p>
+<ul>
+  <li><strong>Bezwzględna</strong> (<em>absolute</em>) zaczyna się od <code>/</code>. Liczy się od korzenia, więc działa tak samo, niezależnie od tego, gdzie stoisz:
+  <code>/var/log</code>.</li>
+  <li><strong>Względna</strong> (<em>relative</em>) nie zaczyna się od <code>/</code>. Liczy się od katalogu roboczego: <code>log</code> znaczy „katalog <code>log</code> tutaj, gdzie stoję".</li>
+</ul>
+<p>Do tego trzy skróty: <code>.</code> (kropka) = katalog, w którym stoję; <code>..</code> (dwie kropki) = katalog o jeden poziom wyżej, „rodzic";
+<code>~</code> = Twój katalog domowy. W konfiguracji docker-compose zobaczysz <code>./dags</code> — to ścieżka względna: „katalog <code>dags</code> obok pliku compose".</p>
+
+<div class="task">
+  <h3>Wejdź do katalogu z logami</h3>
+<pre><code>cd /var/log</code></pre>
+  <p><strong>Co robi:</strong> <code>cd</code> = <em>change directory</em> — zmień katalog roboczy. Tu ścieżką bezwzględną.</p>
+  <p><strong>Na co patrzeć:</strong> na znak zachęty, nie na wynik.</p>
+  <p><strong>Czego się spodziewać:</strong> komenda <strong>nic nie wypisuje</strong>. W Linuksie to zasada: brak komunikatu znaczy, że się udało.
+  Zmienia się tylko znak zachęty:</p>
+<pre><code>rejtan@LEGION:/var/log$</code></pre>
+</div>
+
+<div class="task">
+  <h3>Jeden poziom wyżej</h3>
+<pre><code>cd ..</code></pre>
+  <p><strong>Co robi:</strong> przechodzi do rodzica katalogu roboczego — ścieżką względną <code>..</code>.</p>
+  <p><strong>Na co patrzeć:</strong> znak zachęty. Potwierdź komendą <code>pwd</code>.</p>
+  <p><strong>Czego się spodziewać:</strong> znak zachęty <code>rejtan@LEGION:/var$</code>, a <code>pwd</code> wypisze:</p>
+<pre><code>/var</code></pre>
+</div>
+
+<div class="task">
+  <h3>Do domu</h3>
+<pre><code>cd ~</code></pre>
+  <p><strong>Co robi:</strong> wraca do katalogu domowego. Samo <code>cd</code> bez argumentu robi to samo.</p>
+  <p><strong>Czego się spodziewać:</strong> znak zachęty znowu kończy się na <code>:~$</code>.</p>
+</div>
+
+<h2>4. Pliki, których nie widać</h2>
+<p>Plik albo katalog, którego nazwa zaczyna się od kropki, to <strong>plik ukryty</strong> (<em>hidden file</em>, <em>dotfile</em>).
+Nie jest w żaden sposób chroniony — <code>ls</code> po prostu domyślnie go pomija, żeby nie zaśmiecać listy. Tak żyje większość ustawień:
+<code>.bashrc</code> (ustawienia basha), <code>.docker</code> (ustawienia Dockera), <code>.aws</code> (tu AWS CLI trzyma profile i klucze do S3 —
+<a href="https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-files.html">AWS CLI: configuration and credential files</a>)
+i plik <code>.env</code> z hasłami w projekcie.</p>
+
+<div class="task">
+  <h3>Najpierw zwykła lista</h3>
+<pre><code>ls</code></pre>
+  <p><strong>Co robi:</strong> wypisuje katalog roboczy, czyli <code>~</code>.</p>
+  <p><strong>Na co patrzeć:</strong> czy jest tu cokolwiek zaczynającego się od kropki.</p>
+  <p><strong>Czego się spodziewać:</strong> <code>DataEngineering</code>, <code>Desktop</code>, <code>Documents</code>, <code>Downloads</code>… — i żadnej kropki.</p>
+</div>
+
+<div class="task">
+  <h3>Teraz wszystko</h3>
+<pre><code>ls -a</code></pre>
+  <p><strong>Co robi:</strong> flaga <code>-a</code> = <em>all</em> — pokaż też pliki zaczynające się od kropki.</p>
+  <p><strong>Na co patrzeć:</strong> na nazwy z kropką: <code>.aws</code>, <code>.bashrc</code>, <code>.docker</code> — i na dwa pierwsze wpisy.</p>
+  <p><strong>Czego się spodziewać</strong> (fragment):</p>
+<pre><code>.   ..   .aws   .bash_history   .bashrc   .cache   .config   DataEngineering   Desktop   .docker   …</code></pre>
+  <p>Pierwsze dwa wpisy to <code>.</code> i <code>..</code> — te same skróty z części 3. Każdy katalog je ma: „ja" i „mój rodzic".</p>
+</div>
+<p class="note"><b>Dlaczego to ważne w potokach:</b> <code>.env</code> nie pojawi się w zwykłym <code>ls</code> ani w wielu oknach plików.
+Gdy docker-compose „nie widzi" zmiennej albo ktoś pyta „czy ten <code>.env</code> w ogóle jest?", pierwszym ruchem jest <code>ls -a</code>.
+Nie wypisuj natomiast <code>cat</code>-em zawartości <code>.env</code> ani <code>~/.aws</code> na ekran podczas wspólnego ekranu — tam są sekrety.</p>
+
+<h2>5. Wielka litera to inny plik</h2>
+<p>Linux rozróżnia wielkość liter w nazwach: <code>/etc</code> i <code>/Etc</code> to dwie różne ścieżki. Windows ich nie rozróżnia — stąd błędy,
+gdy skrypt napisany pod Windows trafia do kontenera albo do WSL
+(<a href="https://learn.microsoft.com/en-us/windows/wsl/filesystems">Microsoft Learn — Working across file systems</a>).</p>
+
+<div class="task">
+  <h3>Literówka w ścieżce</h3>
+<pre><code>ls /Etc</code></pre>
+  <p><strong>Co robi:</strong> próbuje wypisać katalog <code>/Etc</code>, który nie istnieje.</p>
+  <p><strong>Na co patrzeć:</strong> kto mówi (pierwsze słowo komunikatu) i co mówi.</p>
+  <p><strong>Czego się spodziewać:</strong></p>
+<pre><code>ls: cannot access '/Etc': No such file or directory</code></pre>
+  <p>Teraz sprawdź kod wyjścia — tę liczbę program oddaje powłoce, a ona trzyma ją w <code>$?</code> (znasz to z lekcji sieci 03–04):</p>
+<pre><code>echo $?</code></pre>
+  <p><code>echo</code> wypisuje to, co mu podasz; tutaj wartość <code>$?</code>. Spodziewaj się <code>2</code> — według <code>man ls</code>
+  kod 2 znaczy „poważny problem, np. nie da się dostać do argumentu z linii poleceń". Airflow, uruchamiając taki krok,
+  zobaczyłby właśnie to <code>2</code> i oznaczył zadanie jako nieudane.</p>
+</div>
+
+<h2>W pracy: WSL</h2>
+<p>W WSL działa ta sama mapa, plus jedna różnica: dysk <code>C:</code> jest zamontowany jako <code>/mnt/c</code>, więc Twój pulpit z Windows to
+<code>/mnt/c/Users/&lt;nazwa&gt;/Desktop</code>. Microsoft zaleca jednak trzymać projekty po stronie Linuksa, w <code>/home/&lt;nazwa&gt;/…</code>,
+bo praca na plikach z <code>/mnt/c</code> jest wyraźnie wolniejsza
+(<a href="https://learn.microsoft.com/en-us/windows/wsl/filesystems">Microsoft Learn</a>).
+Jeśli Twoje repo z DAG-ami leży w <code>/mnt/c/…</code>, to jest jeden z powodów, dla których coś „mieli".</p>
+
+<h2>Trening: gdzie szukać?</h2>
+<p>Każda odpowiedź to ścieżka. Kliknij, potem przeczytaj wyjaśnienie.</p>
+
+<div class="quiz">
+  <p class="quiz__q"><span class="tag">01.3·1</span> Chcesz sprawdzić, kto ostatnio użył <code>sudo</code> na maszynie. Gdzie szukasz?</p>
+  <div class="quiz__opts">
+    <button class="quiz__opt" data-why="/tmp to pliki tymczasowe, które mogą zniknąć — system nie trzyma tam swoich logów.">/tmp</button>
+    <button class="quiz__opt" data-correct data-why="Logi systemu leżą w /var/log; wpisy o logowaniu i sudo są w auth.log.">/var/log</button>
+    <button class="quiz__opt" data-why="/etc to konfiguracja — jak coś ma działać, a nie zapis tego, co się wydarzyło.">/etc</button>
+  </div>
+</div>
+<div class="quiz">
+  <p class="quiz__q"><span class="tag">01.3·2</span> Skrypt robi pośredni zrzut zamówień do CSV, który po wysyłce do S3 nie jest już potrzebny. Gdzie go zapisać?</p>
+  <div class="quiz__opts">
+    <button class="quiz__opt" data-correct data-why="/tmp jest właśnie na pliki, których utrata nic nie psuje — ale nie licz, że przetrwają restart.">/tmp</button>
+    <button class="quiz__opt" data-why="/home to pliki użytkownika na stałe; śmieci pośrednie zaczną się tam zbierać.">/home</button>
+    <button class="quiz__opt" data-why="/opt jest na zainstalowane aplikacje, nie na dane robocze.">/opt</button>
+  </div>
+</div>
+<div class="quiz">
+  <p class="quiz__q"><span class="tag">01.3·3</span> Airflow 3.2.2 z oficjalnego compose. Gdzie <strong>w kontenerze</strong> leżą pliki DAG-ów?</p>
+  <div class="quiz__opts">
+    <button class="quiz__opt" data-why="To wyglądałoby jak config, ale compose podpina ./dags gdzie indziej.">/etc/airflow/dags</button>
+    <button class="quiz__opt" data-why="/var to zmieniające się dane systemu (logi, bazy); compose tego nie używa dla DAG-ów.">/var/airflow/dags</button>
+    <button class="quiz__opt" data-correct data-why="Compose podpina lokalne ./dags pod /opt/airflow/dags — aplikacja „w całości" siedzi w /opt.">/opt/airflow/dags</button>
+  </div>
+</div>
+<div class="quiz">
+  <p class="quiz__q"><span class="tag">01.3·4</span> Jesteś w WSL i chcesz otworzyć plik z pulpitu Windows. Od czego zaczyna się ścieżka?</p>
+  <div class="quiz__opts">
+    <button class="quiz__opt" data-why="/home to drzewo Linuksa; dysk Windows jest zamontowany gdzie indziej.">/home/c/Users</button>
+    <button class="quiz__opt" data-correct data-why="Dysk C: jest zamontowany pod /mnt/c — w Linuksie nie ma liter dysków.">/mnt/c/Users</button>
+    <button class="quiz__opt" data-why="Litera dysku nie staje się katalogiem pod korzeniem; trafia pod punkt montowania /mnt.">/c/Users/me</button>
+  </div>
+</div>
+<div class="quiz">
+  <p class="quiz__q"><span class="tag">01.3·5</span> AWS CLI nie widzi Twoich kluczy do S3. Który katalog sprawdzasz (pamiętając o <code>ls -a</code>)?</p>
+  <div class="quiz__opts">
+    <button class="quiz__opt" data-correct data-why="AWS CLI trzyma profile i klucze w ukrytym katalogu .aws w Twoim katalogu domowym.">~/.aws</button>
+    <button class="quiz__opt" data-why="/etc to konfiguracja całego systemu; ustawienia AWS CLI są per użytkownik, w domu.">/etc/aws</button>
+    <button class="quiz__opt" data-why="/var to zmieniające się dane systemu, nie ustawienia użytkownika.">/var/aws</button>
+  </div>
+</div>
+<div class="quiz">
+  <p class="quiz__q"><span class="tag">01.3·6</span> Stoisz w <code>/var/log</code> i wpisujesz <code>cd ..</code>. Co wypisze potem <code>pwd</code>?</p>
+  <div class="quiz__opts">
+    <button class="quiz__opt" data-why=".. to jeden poziom w górę, nie skok do korzenia.">/</button>
+    <button class="quiz__opt" data-why=".. idzie w górę drzewa, a log jest w dole — to ostatni człon ścieżki.">/log</button>
+    <button class="quiz__opt" data-correct data-why=".. = rodzic. Rodzicem /var/log jest /var.">/var</button>
+  </div>
+</div>
+<p class="score"></p>
+
+<h2>Z pamięci: lekcja sieci 04</h2>
+<div class="recall" data-hint="Najpierw napisz odpowiedź w czacie (01.4), dopiero potem kliknij.">
+  <p class="recall__q"><span class="tag">01.4</span> Komenda <code>getent hosts nie-ma-takiej-nazwy.example</code> nic nie wypisała. Jaki był jej kod wyjścia?
+  Podpowiedź: ten sam co <code>ls /Etc</code> z tej lekcji — i z tego samego powodu: program nie znalazł tego, o co prosiłeś.</p>
+  <div class="recall__a"><code>2</code>. Dla <code>getent</code> znaczy „nie znaleziono klucza w bazie" (<code>man getent</code>). Pusty wynik nie jest błędem
+  sieci ani DNS-u — to <code>getent</code> mówi powłoce „nie mam tej nazwy". Dwa różne programy, ta sama liczba: kod wyjścia
+  znaczy to, co ustali dany program, dlatego sprawdzasz jego <code>man</code>.</div>
+</div>
+
+<section class="respond">
+  <h2>Odpowiedz w czacie</h2>
+  <ol class="respond__list">
+    <li><span class="respond__id">01.1</span> <b>Misja</b> — przeczytaj <code>002_linux/MISSION.md</code> (6 punktów „Success looks like"). Pasuje? Coś dodać albo wyrzucić? Wystarczy jedno zdanie.</li>
+    <li><span class="respond__id">01.2</span> <b>Wyjaśnij i popraw</b> — kolega stoi w <code>~</code> (znak zachęty kończy się na <code>:~$</code>), wpisuje
+      <code>cd var/log</code> i dostaje <code>bash: cd: var/log: No such file or directory</code>. Katalog <code>/var/log</code> przecież istnieje.
+      Dlaczego komenda nie zadziałała i jaką jedną zmianą to naprawisz? (Część 3 lekcji.)</li>
+    <li><span class="respond__id">01.3</span> <b>Trening</b> — kliknij „Skopiuj dla nauczyciela" pod quizem i wklej.</li>
+    <li><span class="respond__id">01.4</span> <b>Z pamięci</b> — kod wyjścia <code>getent</code> dla nieznanej nazwy, zanim klikniesz „Pokaż odpowiedź".</li>
+    <li><span class="respond__id">01.5</span> <b>Z Twojej pracy — tylko opisz, nic nie uruchamiaj</b> — czy repo z Airflow, na którym pracujesz w WSL,
+      leży pod <code>/home/…</code> czy pod <code>/mnt/c/…</code>? Jeśli nie wiesz, napisz, jak je otwierasz (np. z Eksploratora Windows, z VS Code).
+      Co z tego wynika według sekcji „W pracy: WSL"?</li>
+  </ol>
+</section>
+
+<div class="source">
+  <span class="label">Główne źródło (po angielsku)</span>
+  William Shotts, <em>Learning the Shell</em> (linuxcommand.org) — lekcje
+  <a href="https://linuxcommand.org/lc3_lts0020.php">2: Navigation</a> i
+  <a href="https://linuxcommand.org/lc3_lts0040.php">4: A Guided Tour</a> (ta sama mapa katalogów, dłuższa).
+  To skrót książki <a href="https://linuxcommand.org/tlcl.php"><em>The Linux Command Line</em></a> (rozdziały 2–3).
+  Darmowe, pisane przez praktyka, od zera. Dodatkowo: <code>man hier</code> w terminalu.
+</div>
+
+<div class="source">
+  <span class="label">Ściąga do tej lekcji</span>
+  <a href="../reference/mapa-systemu-plikow.html">Mapa systemu plików</a> — katalogi, ścieżki, komendy z tej lekcji na jednej stronie.
+  Pojęcia: <a href="../reference/glossary.html">glosariusz Linuksa</a>.
+</div>
+
+<div class="ask">
+  <strong>Coś niejasne?</strong> Zapytaj mnie w czacie — o dowolny katalog, który zobaczyłeś w <code>ls /</code>, o komendę albo o to, jak to wygląda u Ciebie w pracy.
+  Lepsze pytanie teraz niż zgadywanie później.
+</div>
+
+<nav class="nav">
+  <a href="../../roadmap.html">Mapa ścieżki</a>
+  <a href="../reference/mapa-systemu-plikow.html">Ściąga: mapa systemu plików</a>
+  <a href="../reference/glossary.html">Glosariusz</a>
+</nav>
+
+</main>
+<script src="../../assets/quiz.js"></script>
+</body>
+</html>

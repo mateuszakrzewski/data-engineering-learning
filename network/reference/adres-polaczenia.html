@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Anatomia adresu</title>
+<link rel="stylesheet" href="../assets/lesson.css">
+<style>
+  /* Ściąga jest gęstsza niż lekcja i ma się zmieścić na jednej kartce. */
+  .page { max-width: 50rem; padding-top: 2.2rem; }
+  h2 { margin: 1.8rem 0 .7rem; padding-top: .8rem; }
+  table { font-size: .82rem; margin-bottom: 1rem; }
+  th, td { padding: .42rem .6rem; }
+  pre { font-size: .78rem; padding: .8rem .9rem; margin-bottom: .9rem; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 2rem; }
+  @media (max-width: 44rem) { .grid { grid-template-columns: 1fr; } }
+  @media print { body { font-size: 9.5pt; } h1 { font-size: 20pt; } }
+</style>
+</head>
+<body>
+<main class="page">
+
+  <p class="eyebrow">Ściąga &middot; Sieci dla inżyniera danych</p>
+  <h1>Anatomia adresu</h1>
+  <p class="subtitle">Jak przeczytać dowolny connection string albo URL.</p>
+
+  <h2>Rozbiór</h2>
+
+<pre><code><span class="hl">schemat</span>://<span class="cmt">użytkownik:hasło@</span><span class="hl">host</span>:<span class="hl">port</span><span class="cmt">/ścieżka?parametry</span>
+└─ADRES─┘ └──── logowanie ───┘└ADRES┘ └ADRES┘└──── treść rozmowy ────┘
+
+postgresql://etl_user:tajne@db.firma.pl:5432/warehouse
+https://api.stripe.com/v1/charges?limit=100     <span class="cmt">← port 443 domyślny</span>
+mysql://reader@10.0.3.17:3306/orders
+kafka://broker-1.internal:9092
+ssh://rejtan@bastion.firma.pl:22</code></pre>
+
+  <table>
+    <thead><tr><th>Część</th><th>Pytanie, na które odpowiada</th><th>Kiedy się psuje</th></tr></thead>
+    <tbody>
+      <tr><td><b>schemat</b></td><td>Jakim językiem rozmawiamy?</td><td>zły sterownik, zły protokół, brak <code>s</code> w <code>https</code></td></tr>
+      <tr><td><b>host</b></td><td>Która maszyna?</td><td>DNS nie zna nazwy, literówka, zła sieć</td></tr>
+      <tr><td><b>port</b></td><td>Które drzwi na tej maszynie?</td><td>usługa nie stoi, firewall, zły numer</td></tr>
+      <tr><td><b>user / hasło</b></td><td>Kim jestem?</td><td>błąd uwierzytelnienia — <i>połączenie już działało</i></td></tr>
+      <tr><td><b>ścieżka / baza</b></td><td>Czego chcę?</td><td>404, „database does not exist"</td></tr>
+    </tbody>
+  </table>
+
+  <div class="note">
+    <b>Reguła kolejności.</b> Adres rozstrzyga się <i>przed</i> logowaniem, a logowanie <i>przed</i> treścią.
+    Dlatego komunikat błędu mówi Ci, jak daleko doszło połączenie.
+  </div>
+
+  <div class="grid">
+    <div>
+      <h2>Porty, które spotkasz</h2>
+      <table>
+        <thead><tr><th>Port</th><th>Usługa</th></tr></thead>
+        <tbody>
+          <tr><td><code>22</code></td><td>SSH (też tunele do baz)</td></tr>
+          <tr><td><code>80</code></td><td>HTTP</td></tr>
+          <tr><td><code>443</code></td><td>HTTPS — każde API</td></tr>
+          <tr><td><code>1433</code></td><td>SQL Server</td></tr>
+          <tr><td><code>1521</code></td><td>Oracle</td></tr>
+          <tr><td><code>3306</code></td><td>MySQL / MariaDB</td></tr>
+          <tr><td><code>5432</code></td><td>PostgreSQL</td></tr>
+          <tr><td><code>6379</code></td><td>Redis</td></tr>
+          <tr><td><code>8080</code></td><td>HTTP alternatywny (Airflow, Spark UI)</td></tr>
+          <tr><td><code>9000</code></td><td>MinIO / ClickHouse</td></tr>
+          <tr><td><code>9092</code></td><td>Kafka</td></tr>
+          <tr><td><code>27017</code></td><td>MongoDB</td></tr>
+        </tbody>
+      </table>
+      <p class="note" style="margin:0">Konwencja, nie prawo — zawsze czytaj connection string.</p>
+    </div>
+
+    <div>
+      <h2>Adresy specjalne</h2>
+      <table>
+        <thead><tr><th>Adres</th><th>Znaczenie</th></tr></thead>
+        <tbody>
+          <tr><td><code>127.0.0.1</code></td><td><b>Cel.</b> Pętla zwrotna — ruch nie opuszcza maszyny.</td></tr>
+          <tr><td><code>127.0.0.0/8</code></td><td><b>Cała</b> pętla zwrotna: <code>127.0.0.1</code>–<code>127.255.255.255</code>. Każdy z tych adresów wraca do Ciebie, ale to <b>różne adresy</b> — usługa na jednym nie odpowiada na drugim.</td></tr>
+          <tr><td><code>127.0.0.53</code></td><td>Linux z <code>systemd-resolved</code>: lokalny resolver DNS. Celowo <i>nie</i> <code>127.0.0.1</code>, żeby nie kolidować z Twoimi usługami.</td></tr>
+          <tr><td><code>localhost</code></td><td>Nazwa dla <code>127.0.0.1</code> (z pliku <code>/etc/hosts</code>). Uwaga: bywa też mapowana na <code>::1</code>.</td></tr>
+          <tr><td><code>0.0.0.0</code></td><td><b>Nasłuch.</b> „Otwórz port na wszystkich moich adresach." Nigdy jako cel.</td></tr>
+          <tr><td><code>10.x.x.x</code><br><code>172.16–31.x.x</code><br><code>192.168.x.x</code></td><td>Adresy prywatne — sieć wewnętrzna, VPC, dom. Nieosiągalne z internetu.</td></tr>
+          <tr><td><code>host.docker.internal</code></td><td>Z kontenera: maszyna-gospodarz. Obejście pułapki <code>localhost</code>.</td></tr>
+        </tbody>
+      </table>
+      <p class="note" style="margin:0">
+        <b>Pułapka #1 w potokach:</b> usługa z bind na <code>127.0.0.1</code> jest niewidoczna
+        spoza maszyny — także dla kontenera obok. Nic jej nie blokuje; ona po prostu
+        nie otworzyła drzwi od ulicy.
+      </p>
+      <p class="note" style="margin:.7rem 0 0">
+        <b>Pułapka #2:</b> „localhost" to nie jeden adres. Usługa na <code>127.0.0.53:53</code>
+        odpowie <code>Connection refused</code> na <code>127.0.0.1:53</code> — działa, tylko gdzie indziej.
+        <b>Zawsze czytaj adres z <code>ss -tlnp</code>, nie zgaduj.</b>
+      </p>
+    </div>
+  </div>
+
+  <h2>Cztery komendy</h2>
+
+  <table>
+    <thead><tr><th>Komenda</th><th>Odpowiada na pytanie</th></tr></thead>
+    <tbody>
+      <tr><td><code>dig +short &lt;host&gt;</code></td><td>Na jakie IP rozwiązuje się ta nazwa?</td></tr>
+      <tr><td><code>ss -tlnp</code></td><td>Które porty są otwarte na <i>mojej</i> maszynie i na jakim adresie?</td></tr>
+      <tr><td><code>nc -zv &lt;host&gt; &lt;port&gt;</code></td><td>Czy za tymi drzwiami ktoś w ogóle jest?</td></tr>
+      <tr><td><code>ip addr show lo</code></td><td>Jakie adresy ma pętla zwrotna? (<code>/8</code> = cały zakres <code>127.x.x.x</code>)</td></tr>
+      <tr><td><code>curl -v &lt;url&gt;</code></td><td>Co dzieje się na każdym etapie — od IP, przez TLS, po HTTP?</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Dwa smaki porażki</h2>
+
+  <table>
+    <thead><tr><th>Objaw</th><th>Znaczy</th><th>Gdzie szukać</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><b>Odmowa</b><br><code>Connection refused</code><br><span class="cmt">natychmiast</span></td>
+        <td>Maszyna istnieje i odpowiedziała: „na tym porcie nikogo nie ma".</td>
+        <td>Zła usługa, zły port, <b>zły adres nasłuchu</b>. Sprawdź <code>ss -tlnp</code>.</td>
+      </tr>
+      <tr>
+        <td><b>Cisza</b><br><code>timeout</code> / zawieszenie<br><span class="cmt">po kilkunastu sekundach</span></td>
+        <td>Pakiet zniknął. Nikt nie odpowiedział nawet „nie".</td>
+        <td>Firewall, security group, zła sieć/VPC, zła maszyna.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="note">
+    <b>To jedno rozróżnienie oszczędza godziny.</b> Odmowa = problem <i>usługi</i>.
+    Cisza = problem <i>drogi</i>. Nigdy nie szukaj firewalla, gdy dostajesz <code>refused</code>,
+    i nigdy nie restartuj usługi, gdy dostajesz timeout.
+  </div>
+
+  <div class="note">
+    Kolejność diagnostyczna jest taka sama jak kolejność adresu:
+    <b>najpierw <code>dig</code></b> (czy nazwa istnieje), <b>potem <code>nc</code></b> (czy port odpowiada),
+    <b>dopiero na końcu <code>curl</code></b> (czy rozmowa się udaje). Nie zaczynaj od końca.
+  </div>
+
+  <nav class="nav">
+    <a href="../lessons/0001-adres-polaczenia.html">&larr; Lekcja 01: Adres połączenia</a>
+    <a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/Overview">MDN: Overview of HTTP</a>
+  </nav>
+
+</main>
+</body>
+</html>

@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Adres połączenia</title>
+<link rel="stylesheet" href="../assets/lesson.css">
+<link rel="stylesheet" href="../assets/quiz.css">
+</head>
+<body>
+<main class="page">
+
+  <p class="eyebrow">Lekcja 01 &middot; Sieci dla inżyniera danych</p>
+  <h1>Adres połączenia</h1>
+  <p class="subtitle">Każdy connection string i każdy URL w Twoim potoku odpowiadają na te same trzy pytania.</p>
+
+  <div class="goal">
+    <strong>Po tej lekcji</strong>
+    Weźmiesz dowolny connection string albo adres API i powiesz, co każda jego część robi na poziomie sieci —
+    oraz zrozumiesz, dlaczego baza, która „działa lokalnie", nie przyjmuje połączeń z zewnątrz.
+  </div>
+
+  <h2>Trzy pytania</h2>
+
+  <p>
+    Kiedy Twój potok łączy się z bazą albo woła API, system operacyjny musi dostać
+    odpowiedź na trzy pytania — i nic więcej go na tym etapie nie obchodzi:
+  </p>
+
+  <table>
+    <thead>
+      <tr><th>Pytanie</th><th>Odpowiada</th><th>Przykład</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><b>Która maszyna?</b></td>
+        <td>host — nazwa albo adres IP</td>
+        <td><code>db.firma.pl</code>, <code>10.0.3.17</code></td>
+      </tr>
+      <tr>
+        <td><b>Które drzwi?</b></td>
+        <td>port — liczba 1–65535</td>
+        <td><code>5432</code>, <code>443</code></td>
+      </tr>
+      <tr>
+        <td><b>Jakim językiem?</b></td>
+        <td>protokół — schemat na początku</td>
+        <td><code>postgresql://</code>, <code>https://</code></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p>
+    To wszystko. Reszta adresu — użytkownik, hasło, ścieżka, nazwa bazy — to już treść rozmowy,
+    a nie adres. Popatrz na dwie rzeczy, które pewnie masz w kodzie, ustawione jedna pod drugą:
+  </p>
+
+<pre><code>postgresql://etl_user:tajne@<span class="hl">db.firma.pl</span>:<span class="hl">5432</span>/warehouse
+<span class="cmt">└─protokół──┘└─kto się loguje─┘ └───host───┘ └port┘└─baza──┘</span>
+
+https://<span class="hl">api.stripe.com</span>:<span class="hl">443</span>/v1/charges?limit=100
+<span class="cmt">└protokół┘ └─────host─────┘ └port┘└──ścieżka──┘└─parametry─┘</span></code></pre>
+
+  <p>
+    Ta sama struktura. Dlatego nauka HTTP i nauka „dlaczego nie mogę się dobić do bazy" to
+    w gruncie rzeczy jedna nauka — <b>oba to połączenie z hostem na porcie</b>, różnią się tylko językiem,
+    którym potem rozmawiają.
+  </p>
+
+  <div class="note">
+    <b>Port bywa niewidoczny.</b> <code>https://api.stripe.com/v1/charges</code> działa tak samo —
+    port <code>443</code> jest domyślny dla <code>https</code>, więc nie trzeba go pisać.
+    Podobnie <code>5432</code> dla Postgresa. Domyślny port zawsze tam jest, nawet gdy go nie widzisz.
+  </div>
+
+  <h2>Host: nazwa to wygoda, IP to prawdziwy adres</h2>
+
+  <p>
+    <code>db.firma.pl</code> nie jest adresem. To <b>nazwa</b> — coś, co ludzie umieją zapamiętać.
+    Prawdziwym adresem w sieci jest adres IP, np. <code>10.0.3.17</code>.
+    Zanim cokolwiek się połączy, nazwa musi zostać zamieniona na IP — i robi to <b>DNS</b>,
+    czyli książka telefoniczna internetu.
+  </p>
+
+  <p>
+    To rozróżnienie jest ważniejsze, niż wygląda: jeśli DNS nie zna nazwy, połączenie umiera,
+    zanim ktokolwiek spróbuje zapukać do jakiegokolwiek portu. Dlatego <code>could not translate
+    host name</code> i <code>connection refused</code> to dwa zupełnie różne światy — wrócimy do
+    tego w kolejnej lekcji.
+  </p>
+
+  <h2>Port: jedna maszyna, wiele drzwi</h2>
+
+  <p>
+    Na jednym serwerze stoi zwykle kilka usług naraz. IP prowadzi Cię pod właściwy budynek,
+    a port mówi, do których drzwi zapukać. Numery są umowne, ale trzymamy się konwencji:
+  </p>
+
+  <table>
+    <thead><tr><th>Port</th><th>Zwykle</th><th>Gdzie to spotkasz</th></tr></thead>
+    <tbody>
+      <tr><td><code>443</code></td><td>HTTPS</td><td>każde API, po które sięgasz z potoku</td></tr>
+      <tr><td><code>80</code></td><td>HTTP (bez szyfrowania)</td><td>stare wewnętrzne serwisy, health checki</td></tr>
+      <tr><td><code>22</code></td><td>SSH</td><td>wejście na serwer, tunele do baz</td></tr>
+      <tr><td><code>5432</code></td><td>PostgreSQL</td><td>hurtownia, warstwa aplikacyjna</td></tr>
+      <tr><td><code>3306</code></td><td>MySQL / MariaDB</td><td>bazy źródłowe aplikacji</td></tr>
+      <tr><td><code>9092</code></td><td>Kafka</td><td>strumienie zdarzeń</td></tr>
+      <tr><td><code>8080</code></td><td>HTTP „na drugim biegu"</td><td>Airflow, Spark UI, lokalny dev</td></tr>
+    </tbody>
+  </table>
+
+  <div class="note">
+    <b>Konwencja, nie prawo.</b> Nic nie zmusza Postgresa, żeby słuchał na <code>5432</code>.
+    Zespoły przestawiają porty — dlatego connection string zawsze warto przeczytać,
+    zamiast zakładać.
+  </div>
+
+  <h2>Dlaczego „działa lokalnie, nie działa z zewnątrz"</h2>
+
+  <p>
+    Tu jest pułapka, która kosztuje inżynierów danych najwięcej godzin. Usługa nie tylko
+    <i>ma</i> port — ona jeszcze decyduje, <b>na którym adresie go otwiera</b>. To jest
+    <i>bind address</i>:
+  </p>
+
+  <table>
+    <thead><tr><th>Bind address</th><th>Znaczy</th><th>Kto się dobije</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><code>127.0.0.1</code><br><span class="cmt">= <code>localhost</code></span></td>
+        <td>„tylko ta maszyna, przez pętlę zwrotną"</td>
+        <td>wyłącznie procesy na tym samym hoście</td>
+      </tr>
+      <tr>
+        <td><code>0.0.0.0</code></td>
+        <td>„każdy adres, jaki ta maszyna ma"</td>
+        <td>każdy, komu firewall na to pozwoli</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p>
+    Baza nasłuchująca na <code>127.0.0.1:5432</code> jest niewidzialna spoza maszyny — nie dlatego,
+    że coś ją blokuje, tylko dlatego, że <b>nigdy nie otworzyła drzwi od strony ulicy</b>.
+    To właśnie dzieje się, gdy Postgres w Dockerze „nie odpowiada", a w kontenerze <code>psql</code> działa.
+  </p>
+
+  <div class="note">
+    <b>Zapamiętaj różnicę ról.</b> <code>127.0.0.1</code> to adres, pod który <i>dzwonisz</i>.
+    <code>0.0.0.0</code> nie jest adresem, pod który się dzwoni — to deklaracja serwera,
+    <i>na czym nasłuchuje</i>. Zobaczysz go w konfiguracji, nigdy w connection stringu.
+  </div>
+
+  <h2>Sprawdź się</h2>
+  <p class="score"></p>
+
+  <div class="quiz">
+    <p class="quiz__q">W adresie <code>https://api.github.com/repos/pandas-dev/pandas</code> — na którym porcie odbędzie się to połączenie?</p>
+    <div class="quiz__opts">
+      <button class="quiz__opt" data-correct data-why="Schemat https ma domyślny port 443, więc nie trzeba go pisać jawnie.">Na porcie numer 443</button>
+      <button class="quiz__opt" data-why="Port 80 jest domyślny dla http, nie dla https.">Na porcie numer 080</button>
+      <button class="quiz__opt" data-why="Bez jawnego portu nie oznacza braku portu — jest domyślny.">Port nie jest tu użyty</button>
+      <button class="quiz__opt" data-why="Numer portu nie wynika z treści ścieżki w adresie.">Zależy to od ścieżki</button>
+    </div>
+  </div>
+
+  <div class="quiz">
+    <p class="quiz__q">Twój Airflow na serwerze <code>10.0.3.17</code> nie łączy się z Postgresem stojącym na tej samej maszynie, w konfiguracji której widzisz <code>listen_addresses = 'localhost'</code>. Airflow biegnie w kontenerze. Co jest przyczyną?</p>
+    <div class="quiz__opts">
+      <button class="quiz__opt" data-correct data-why="Kontener to z punktu widzenia sieci osobny host, więc pętla zwrotna bazy jest dla niego niedostępna.">Baza słucha tylko lokalnie</button>
+      <button class="quiz__opt" data-why="Nazwa hosta rozwiązuje się poprawnie — adres IP jest przecież podany wprost.">Nazwa hosta jest błędna</button>
+      <button class="quiz__opt" data-why="Nic tu nie wskazuje na złe hasło; problem jest wcześniej, na poziomie połączenia.">Hasło jest nieprawidłowe</button>
+      <button class="quiz__opt" data-why="Numer portu jest tu standardowy i nie jest źródłem problemu.">Port został przestawiony</button>
+    </div>
+  </div>
+
+  <div class="quiz">
+    <p class="quiz__q">Co w connection stringu <code>postgresql://etl:x@db.firma.pl:5432/warehouse</code> należy do <i>adresu</i>, a nie do treści rozmowy?</p>
+    <div class="quiz__opts">
+      <button class="quiz__opt" data-correct data-why="Protokół, host i port opisują, dokąd idzie połączenie. Użytkownik i nazwa bazy to już rozmowa po nawiązaniu połączenia.">Protokół, host i port</button>
+      <button class="quiz__opt" data-why="Nazwa bazy jest przekazywana dopiero po nawiązaniu połączenia.">Host, port, nazwa bazy</button>
+      <button class="quiz__opt" data-why="Użytkownik i hasło są danymi logowania, wysyłanymi po połączeniu.">Użytkownik, host, port</button>
+      <button class="quiz__opt" data-why="Same host i port to za mało — protokół też należy do adresu.">Wyłącznie host i port</button>
+    </div>
+  </div>
+
+  <div class="recall" data-hint="Odpowiedz na głos, zanim klikniesz — to właśnie ten wysiłek buduje pamięć długotrwałą.">
+    <p class="recall__q">Czym różni się <code>0.0.0.0</code> od <code>127.0.0.1</code> i w którym z nich zobaczysz każdy z nich?</p>
+    <div class="recall__a">
+      <code>127.0.0.1</code> (<code>localhost</code>) to <b>adres docelowy</b> — pętla zwrotna, ruch nigdy nie opuszcza maszyny.
+      Zobaczysz go w connection stringu.<br>
+      <code>0.0.0.0</code> to <b>deklaracja nasłuchu</b> — „otwórz ten port na wszystkich moich adresach".
+      Zobaczysz go w konfiguracji serwera, nigdy jako cel połączenia.
+    </div>
+  </div>
+
+  <h2>Zrób to w terminalu</h2>
+
+  <p>Pięć minut, cztery komendy. Po każdej zapisz sobie, co zobaczyłeś — omówimy to.</p>
+
+  <div class="task">
+    <h3>Zamień nazwę na adres IP</h3>
+<pre><code>dig +short api.github.com</code></pre>
+    <p class="note" style="margin:0">
+      To jest DNS w akcji: nazwa wchodzi, adres IP wychodzi. Możesz dostać kilka adresów —
+      to normalne, duże serwisy stoją na wielu maszynach.
+      Jeśli nie masz <code>dig</code>: <code>sudo apt install dnsutils</code>.
+    </p>
+  </div>
+
+  <div class="task">
+    <h3>Zobacz, kto nasłuchuje na Twojej maszynie</h3>
+<pre><code>ss -tlnp</code></pre>
+    <p class="note" style="margin:0">
+      Lista otwartych drzwi. W kolumnie adresu zobaczysz właśnie <code>127.0.0.1:port</code>
+      i <code>0.0.0.0:port</code> — i od razu wiesz, które usługi są widoczne tylko lokalnie.
+      <code>t</code> = TCP, <code>l</code> = nasłuchujące, <code>n</code> = numery zamiast nazw, <code>p</code> = proces.
+    </p>
+  </div>
+
+  <div class="task">
+    <h3>Zapukaj do portu, nic nie mówiąc</h3>
+<pre><code>nc -zv api.github.com 443
+nc -zv api.github.com 444</code></pre>
+    <p class="note" style="margin:0">
+      Pierwsza komenda sprawdza tylko jedno: czy za tymi drzwiami ktoś jest.
+      Druga — port, na którym nikogo nie ma — pokaże Ci, jak wygląda porażka.
+      Zwróć uwagę, że <b>nie wysłaliśmy tu żadnego HTTP</b>. To czysty poziom „host + port".
+    </p>
+  </div>
+
+  <div class="task">
+    <h3>Zobacz wszystkie trzy warstwy naraz</h3>
+<pre><code>curl -v https://api.github.com/zen</code></pre>
+    <p class="note" style="margin:0">
+      W liniach z <code>*</code> przeczytasz całą historię: <code>Trying 140.82.…:443</code> (host → IP, port),
+      potem uzgadnianie TLS, a dopiero w liniach z <code>&gt;</code> zaczyna się HTTP.
+      Trzy pytania z początku lekcji, jedno pod drugim, na żywo.
+    </p>
+  </div>
+
+  <div class="source">
+    <span class="label">Źródło do przeczytania</span>
+    <a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/Overview">MDN — Overview of HTTP</a>,
+    sekcje „Components of HTTP-based systems" i „Basic aspects of HTTP".
+    Kanoniczna dokumentacja Mozilli, utrzymywana i cytowana w całej branży. Około 10 minut czytania;
+    zobaczysz w niej ten sam podział klient / serwer / protokół, tylko od strony samego HTTP.
+    <br><br>
+    Jeśli wolisz obrazki niż prozę — <a href="https://jvns.ca/networking-zine.pdf">Networking! ACK! Julii Evans (PDF, darmowy)</a>
+    to najlepszy krótki wstęp do myślenia o sieci przez narzędzia.
+  </div>
+
+  <div class="ask">
+    <b>Jestem Twoim nauczycielem — pytaj.</b> Jeśli coś tu jest niejasne, jeśli któraś komenda dała dziwny wynik,
+    albo jeśli masz w pracy konkretny connection string, którego nie rozumiesz — wklej go i rozbierzemy go razem.
+    Wynik z terminala też wklej, przejdziemy przez niego linijka po linijce.
+  </div>
+
+  <nav class="nav">
+    <a href="../reference/adres-polaczenia.html">Ściąga: anatomia adresu &rarr;</a>
+    <a href="../MISSION.md">Misja</a>
+    <a href="../RESOURCES.md">Źródła</a>
+  </nav>
+
+</main>
+<script src="../assets/quiz.js"></script>
+</body>
+</html>

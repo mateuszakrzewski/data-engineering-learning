@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Glosariusz</title>
+<link rel="stylesheet" href="../assets/lesson.css">
+<style>
+  .page { max-width: 52rem; padding-top: 2.2rem; }
+  h2 { margin: 1.9rem 0 .6rem; padding-top: .8rem; }
+  h3 { margin: 1.3rem 0 .3rem; font-size: 1rem; color: var(--accent); }
+  h3 .en { color: var(--ink-soft); font-weight: 400; font-style: italic; font-size: .85em; }
+  .def { margin: 0 0 .5rem; font-size: .95rem; }
+  .ev { font-family: var(--sans); font-size: .8rem; color: var(--ink-soft);
+        border-left: 2px solid var(--rule); padding-left: .8rem; margin: 0 0 1rem; }
+  .ev b { color: var(--ink); }
+  .ev code { font-size: .88em; }
+  pre { font-size: .76rem; padding: .7rem .9rem; margin-bottom: .7rem; }
+  table { font-size: .8rem; margin-bottom: .9rem; }
+  th, td { padding: .38rem .55rem; }
+  .toc { font-family: var(--sans); font-size: .85rem; columns: 2; column-gap: 2rem;
+         background: var(--surface); border: 1px solid var(--rule); border-radius: 6px;
+         padding: 1rem 1.2rem; margin-bottom: 2rem; }
+  .toc a { display: block; text-decoration: none; padding: .12rem 0; break-inside: avoid; }
+  @media print { body { font-size: 9pt; } h1 { font-size: 19pt; } .toc { columns: 3; } }
+  @media (max-width: 40rem) { .toc { columns: 1; } }
+</style>
+</head>
+<body>
+<main class="page">
+
+  <p class="eyebrow">Ściąga &middot; Sieci dla inżyniera danych</p>
+  <h1>Glosariusz</h1>
+  <p class="subtitle">Pojęcia kanoniczne — te, które w dokumentacji uznaje się za znane. Definicja + dowód z Twojego terminala.</p>
+
+  <div class="note">
+    <b>Po co to jest.</b> Rozwinięcie skrótu działa tylko wtedy, gdy trafia w znane pojęcie.
+    <code>-t</code> = <i>TCP</i> nie pomaga, jeśli „TCP" jest pustym słowem — zamieniasz wtedy
+    jedno zaklęcie na drugie. Ten dokument jest warstwą pod
+    <a href="komendy-diagnostyczne.html">ściągą z komend</a>.
+  </div>
+
+  <nav class="toc">
+    <a href="#socket">socket</a>
+    <a href="#port">port</a>
+    <a href="#ipv4">IPv4</a>
+    <a href="#ipv6">IPv6</a>
+    <a href="#loopback">loopback</a>
+    <a href="#prywatne">adres prywatny</a>
+    <a href="#linklocal">link-local</a>
+    <a href="#fqdn">FQDN i kropka</a>
+    <a href="#dns">DNS</a>
+    <a href="#tcp">TCP</a>
+    <a href="#udp">UDP</a>
+    <a href="#unixsocket">Unix socket</a>
+    <a href="#tls">TLS i certyfikat</a>
+    <a href="#status">kod statusu HTTP</a>
+    <a href="#stany">LISTEN / ESTAB / UNCONN</a>
+    <a href="#daemon">daemon</a>
+    <a href="#pid">PID i fd</a>
+    <a href="#pipe">pipe <code>|</code></a>
+    <a href="#stdout">stdout / stderr</a>
+    <a href="#exitcode">kod wyjścia <code>$?</code></a>
+  </nav>
+
+  <h2>Adres: gdzie puka się i dokąd</h2>
+
+  <h3 id="socket">socket <span class="en">— gniazdo</span></h3>
+  <p class="def">
+    Jeden konkretny <b>punkt końcowy komunikacji</b>. W sieci TCP/IP identyfikuje go para
+    <b>adres&nbsp;IP + port</b>. Nie jest to ani maszyna, ani program — to adres, pod którym
+    program da się zastać. Ta sama maszyna ma ich wiele naraz.
+  </p>
+  <p class="def">
+    Uwaga na subtelność: <b>gniazdo nasłuchujące</b> opisuje para (adres, port). Ale <b>nawiązane
+    połączenie</b> opisuje dopiero <b>czwórka</b>: adres i port lokalny + adres i port zdalny.
+    Dzięki temu stu klientów może rozmawiać z jednym portem <code>443</code> i nic się nie miesza —
+    każde połączenie ma inny port po stronie klienta.
+  </p>
+  <div class="ev">
+    <b>Twój wynik.</b> Gniazdo nasłuchujące — dwa pola:<br>
+    <code>LISTEN &nbsp; 127.0.0.53%lo:53 &nbsp; 0.0.0.0:*</code><br>
+    Połączenie — cztery pola, bo rozmowa ma dwie strony:<br>
+    <code>ESTAB &nbsp; 192.168.14.7:51288 &nbsp; 34.107.243.93:443</code><br>
+    Port <code>51288</code> dostałeś losowo na czas tej jednej rozmowy (<i>port efemeryczny</i>).
+  </div>
+
+  <h3 id="port">port</h3>
+  <p class="def">
+    Liczba <b>0–65535</b> rozróżniająca usługi pod jednym adresem IP. Numer nie ma mocy sprawczej —
+    to konwencja. Zakresy: <b>0–1023</b> „dobrze znane" (wymagają uprawnień roota, np. 53, 80, 443),
+    <b>1024–49151</b> zarejestrowane (5432 PostgreSQL, 3306 MySQL), <b>49152–65535</b> efemeryczne
+    — te przydziela system klientowi na czas jednego połączenia.
+  </p>
+
+  <h3 id="ipv4">IPv4 <span class="en">— Internet Protocol version 4</span></h3>
+  <p class="def">
+    Adres <b>32-bitowy</b>, zapisywany jako cztery liczby 0–255 rozdzielone kropkami:
+    <code>140.82.121.6</code>. Daje około 4,3 mld adresów — za mało dla dzisiejszego internetu,
+    stąd adresy prywatne i NAT. To nadal domyślny świat, w którym żyją connection stringi.
+  </p>
+
+  <h3 id="ipv6">IPv6 <span class="en">— Internet Protocol version 6</span></h3>
+  <p class="def">
+    Adres <b>128-bitowy</b>, zapisywany jako osiem grup po cztery znaki szesnastkowe, rozdzielonych
+    dwukropkami. <code>::</code> skraca najdłuższy ciąg zer — dlatego pętla zwrotna
+    <code>0000:...:0001</code> zapisuje się jako <code>::1</code>.
+  </p>
+  <p class="def">
+    Ponieważ adres sam zawiera dwukropki, przy podawaniu portu <b>owija się go w nawiasy
+    kwadratowe</b>: <code>[::1]:631</code>. Ta sama zasada obowiązuje w connection stringach i URL-ach.
+  </p>
+  <div class="ev">
+    <b>Twój wynik.</b> <code>curl</code> napisał <code>IPv6: (none)</code> i
+    <code>IPv4: 140.82.121.6</code> — czyli pytał o oba, a GitHub dał mu tylko czwórkę.
+    Gdy host ma oba adresy, system zwykle próbuje najpierw IPv6. <b>To bywa źródłem „dziwnych"
+    timeoutów</b>: IPv6 jest skonfigurowany, ale nie działa, więc połączenie wisi, zanim spadnie na IPv4.
+  </div>
+
+  <h3 id="loopback">loopback <span class="en">— pętla zwrotna</span></h3>
+  <p class="def">
+    Wirtualny interfejs, na którym maszyna rozmawia sama ze sobą. Ruch nigdy nie opuszcza komputera.
+    W IPv4 to <b>cały zakres <code>127.0.0.0/8</code></b> (od <code>127.0.0.1</code> do
+    <code>127.255.255.255</code>), w IPv6 — <code>::1</code>. Zapis <code>/8</code> mówi, ile
+    początkowych bitów jest wspólnych dla całego zakresu: 8 bitów, czyli pierwsza liczba.
+  </p>
+  <div class="ev">
+    <b>Twój wynik.</b> <code>127.0.0.53</code>, <code>127.0.0.54</code> i <code>127.0.0.1</code>
+    to <b>trzy różne adresy</b>, nie synonimy. Usługa związana z jednym nie odpowiada na drugim —
+    dlatego <code>nc -zv 127.0.0.1 53</code> dał <code>refused</code>, a
+    <code>nc -zv 127.0.0.53 53</code> dał <code>succeeded</code>.
+  </div>
+
+  <h3 id="prywatne">adres prywatny</h3>
+  <p class="def">
+    Zakresy zarezerwowane dla sieci lokalnych, nierutowalne w publicznym internecie:
+    <b><code>10.0.0.0/8</code></b>, <b><code>172.16.0.0/12</code></b>,
+    <b><code>192.168.0.0/16</code></b>. Ten sam adres może istnieć w tysiącach sieci naraz.
+    Wyjście na zewnątrz zapewnia router przez <b>NAT</b> (<i>Network Address Translation</i>),
+    podmieniając adres prywatny na swój publiczny.
+  </p>
+  <div class="ev">
+    <b>Twój wynik.</b> <code>192.168.14.7</code> to Twój laptop w domowej sieci.
+    Masz więc trzy piętra adresów: <code>127.0.0.1</code> (tylko ja) →
+    <code>192.168.14.7</code> (moja sieć) → <code>140.82.121.6</code> (publiczny internet).
+    <b>To jest dokładnie ta oś, wzdłuż której konfiguruje się dostęp do bazy danych.</b>
+  </div>
+
+  <h3 id="linklocal">link-local</h3>
+  <p class="def">
+    Adres ważny wyłącznie na jednym łączu, nadawany automatycznie bez żadnego serwera.
+    W IPv6 to zakres <code>fe80::/10</code>. Ponieważ ten sam adres może istnieć na kilku
+    interfejsach naraz, dopisuje się <b>identyfikator interfejsu po znaku <code>%</code></b>.
+  </p>
+  <div class="ev">
+    <b>Twój wynik.</b> <code>[fe80::7299:e775:7f88:696a]%wlp9s0:546</code> — adres link-local
+    na karcie Wi-Fi (<code>wlp9s0</code>), port 546 = klient DHCPv6. Ten sam znak <code>%</code>
+    widziałeś w <code>127.0.0.53%lo</code>, gdzie <code>lo</code> to interfejs loopback.
+  </div>
+
+  <h3 id="fqdn">FQDN i kropka na końcu <span class="en">— Fully Qualified Domain Name</span></h3>
+  <p class="def">
+    Nazwa domenowa czytana jest <b>od prawej do lewej</b>, a na samej prawej stronie stoi
+    <b>korzeń</b> (<i>root</i>) — zapisywany jako <b>pusta etykieta, czyli kropka</b>.
+    <code>api.github.com<b>.</b></code> to nazwa w pełni kwalifikowana: korzeń → <code>com</code>
+    → <code>github</code> → <code>api</code>. Bez kropki system może dokleić własną domenę wyszukiwania.
+  </p>
+  <div class="ev">
+    <b>Twój wynik.</b> W odpowiedzi <code>dig</code> każda nazwa ma kropkę na końcu:
+    <code>;api.github.com.&nbsp;&nbsp;IN&nbsp;&nbsp;A</code> oraz
+    <code>github-com.mail.protection.outlook.com.</code> — DNS zawsze mówi pełnymi nazwami.
+  </div>
+
+  <h2>Protokoły: jak się rozmawia</h2>
+
+  <h3 id="dns">DNS <span class="en">— Domain Name System</span></h3>
+  <p class="def">
+    Rozproszona „książka telefoniczna" internetu: zamienia <b>nazwę</b> (<code>api.github.com</code>) na
+    <b>adres IP</b> (<code>140.82.121.6</code>). Twój system nie pyta całego świata sam — pyta lokalny
+    <b>resolver</b>, a ten szuka dalej i trzyma odpowiedzi w cache przez czas <b>TTL</b>.
+    To <b>pierwszy szczebel</b> każdego połączenia po nazwie.
+  </p>
+  <p class="def">
+    Nie ma jednej książki — jest <b>hierarchia</b>, czytana od prawej: <b>serwery root</b> wiedzą, kto obsługuje
+    <code>com</code>; serwery <code>com</code> wiedzą, kto obsługuje <code>github.com</code>; dopiero
+    <b>serwer autorytatywny</b> (<i>authoritative</i>) GitHuba zna adres <code>api.github.com</code>.
+    Wędrówkę po tej hierarchii robi <b>resolver rekurencyjny</b> (zwykle u dostawcy internetu albo w chmurze).
+    Twój <code>127.0.0.53</code> to tylko <b>stub resolver</b>: pośrednik z pamięcią, który przekazuje pytanie dalej i zapamiętuje odpowiedź na czas TTL.
+  </p>
+  <div class="ev">
+    <b>Twój łańcuch (2026-09-24).</b> program → <code>127.0.0.53</code> (<code>systemd-resolved</code>, cache) →
+    router <code>192.168.1.1</code> / <code>fe80::1</code> (z <code>resolvectl status</code>) → resolver rekurencyjny →
+    root (<code>m.root-servers.net</code>) → <code>com</code> (<code>m.gtld-servers.net</code>) → autorytatywny GitHuba
+    (<code>dns4.p08.nsone.net</code>) → <code>140.82.121.6</code>. Cała wędrówka: <code>dig +trace api.github.com</code>.
+  </div>
+  <div class="ev">
+    <b>Twój wynik.</b> <code>SERVER: 127.0.0.53#53</code> w <code>dig</code> — Twój resolver.
+    Gdy DNS zawodzi: <code>curl: (6) Could not resolve host</code>, <code>psql: could not translate host name … to address</code>.
+    Patrz <a href="drabina-bledow.html">drabina błędów</a>.
+  </div>
+
+
+  <h3 id="nss">NSS, <code>/etc/hosts</code>, <code>/etc/resolv.conf</code> <span class="en">— Name Service Switch</span></h3>
+  <p class="def">
+    Programy nie pytają DNS-u same — proszą <b>bibliotekę systemową</b>, a ta pyta źródła w kolejności z
+    <code>/etc/nsswitch.conf</code> (linia <code>hosts:</code>). <code>files</code> = plik <code>/etc/hosts</code>
+    (ręczna lista „adres nazwa"), <code>dns</code> = serwer wskazany w <code>/etc/resolv.conf</code> (linia <code>nameserver</code>).
+    Narzędzie, które idzie tym samym łańcuchem: <code>getent hosts nazwa</code>. <code>dig</code> pyta tylko serwer DNS.
+  </p>
+  <div class="ev">
+    <b>Twoje wyniki (lekcja 04).</b> Laptop: <code>hosts: files mdns4_minimal [NOTFOUND=return] dns</code>,
+    <code>127.0.1.1 LEGION</code>, <code>nameserver 127.0.0.53</code>. Kontener w sieci użytkownika: <code>nameserver 127.0.0.11</code>.
+  </div>
+
+  <h3 id="dockerdns">DNS Dockera <span class="en">— embedded DNS server, 127.0.0.11</span></h3>
+  <p class="def">
+    Serwer DNS wbudowany w Dockera, dostępny <b>tylko</b> dla kontenerów w sieci tworzonej przez użytkownika
+    (<code>docker network create</code>, każda sieć <code>docker compose</code>). Zna nazwy kontenerów i serwisów z tej sieci.
+    Laptop i kontenery w domyślnej sieci <code>bridge</code> go nie widzą. Stąd reguła: <b>nazwę rozwiązuje maszyna, na której działa program</b>.
+    (<a href="https://docs.docker.com/engine/network/#dns-services">Docker: DNS services</a>)
+  </p>
+  <div class="ev">
+    <b>Twój wynik.</b> <code>getent hosts db</code> w sieci <code>lekcja04</code> → <code>172.19.0.2 db</code>; z laptopa → kod <code>2</code>;
+    <code>psql …@db…</code> z laptopa → <code>could not translate host name "db" to address</code>.
+  </div>
+
+  <h3 id="tcp">TCP <span class="en">— Transmission Control Protocol</span></h3>
+  <p class="def">
+    Protokół <b>połączeniowy i niezawodny</b>. Zanim poleci choć bajt danych, strony ustalają
+    połączenie <b>uściskiem dłoni</b> (<i>three-way handshake</i>: SYN → SYN-ACK → ACK). Potem TCP
+    gwarantuje, że dane dotrą <b>w komplecie i we właściwej kolejności</b> — potwierdza każdy
+    fragment, powtarza zgubione, układa je z powrotem po kolei.
+  </p>
+  <p class="def">
+    Cena to opóźnienie: zanim zaczniesz rozmawiać, tracisz jedną podróż w tę i z powrotem.
+    <b>Wszystko, co dotyczy baz danych i API, jedzie po TCP</b> — PostgreSQL, MySQL, HTTP, HTTPS.
+  </p>
+  <div class="ev">
+    <b>Dlaczego to dla Ciebie ważne.</b> Skoro TCP wymaga zestawienia połączenia, to
+    <code>nc -z</code> może sprawdzić samo „czy ktoś tam jest", nie wysyłając ani bajtu treści —
+    bo sam uścisk dłoni już jest odpowiedzią. Stąd trzy możliwe wyniki:
+    <b>succeeded</b> (uścisk doszedł do skutku), <b>refused</b> (maszyna odpowiedziała
+    „nikogo tu nie ma"), <b>timeout</b> (cisza — pakiet zniknął po drodze).
+  </div>
+
+  <h3 id="udp">UDP <span class="en">— User Datagram Protocol</span></h3>
+  <p class="def">
+    Protokół <b>bezpołączeniowy i bez gwarancji</b>. Wysyłasz pakiet (<i>datagram</i>) i tyle:
+    brak uścisku dłoni, brak potwierdzeń, brak powtórek, brak gwarancji kolejności. Za to
+    <b>bez narzutu</b> — jedno pytanie, jedna odpowiedź, zero ceremonii.
+  </p>
+  <p class="def">
+    Dlatego DNS domyślnie jeździ po UDP: pytanie i odpowiedź mieszczą się w jednym małym pakiecie,
+    a jak zginie — po prostu pytasz drugi raz. Gdy odpowiedź nie mieści się w limicie, DNS
+    przełącza się na TCP.
+  </p>
+  <div class="ev">
+    <b>Twój wynik.</b> <code>dig</code> zaraportował <code>SERVER: 127.0.0.53#53(127.0.0.53) <b>(UDP)</b></code>
+    — powiedział wprost, którym protokołem pojechał. A <code>ss -ulnp</code> pokazało te same
+    porty 53, co <code>ss -tlnp</code>: resolver słucha na obu protokołach naraz.
+  </div>
+
+  <h3 id="unixsocket">Unix socket <span class="en">— Unix domain socket</span></h3>
+  <p class="def">
+    Gniazdo do rozmowy <b>między procesami na tej samej maszynie</b>, adresowane nie przez
+    IP i port, lecz przez <b>ścieżkę w systemie plików</b>, np.
+    <code>/var/run/postgresql/.s.PGSQL.5432</code>. Ruch w ogóle nie wchodzi do stosu sieciowego —
+    jest szybszy i chroniony zwykłymi uprawnieniami do pliku.
+  </p>
+  <div class="ev">
+    <b>Pułapka, na którą się natkniesz.</b> Lokalne <code>psql -U postgres</code> łączy się
+    domyślnie przez <b>Unix socket</b>, a <code>psql -h localhost -U postgres</code> —
+    przez <b>TCP na 127.0.0.1</b>. To dwie różne drogi, rządzone przez <b>różne reguły</b>
+    w <code>pg_hba.conf</code>. Stąd klasyczne „działa bez <code>-h</code>, nie działa z <code>-h</code>".
+    Docker używa tego samego mechanizmu: <code>/var/run/docker.sock</code>.
+  </div>
+
+  <h3 id="tls">TLS i certyfikat <span class="en">— Transport Layer Security</span></h3>
+  <p class="def">
+    Warstwa, która jedzie <b>na TCP</b> i daje trzy rzeczy: <b>szyfrowanie</b> (nikt nie podsłucha),
+    <b>uwierzytelnienie serwera</b> (to na pewno on) i <b>integralność</b> (nikt nie podmienił bajtów)
+    (<a href="https://hpbn.co/transport-layer-security-tls/#encryption-authentication-and-integrity">HPBN</a>).
+    Dawna nazwa: SSL — stąd <code>sslmode</code> w Postgresie i „SSL" w komunikatach, choć dziś to zawsze TLS.
+  </p>
+  <p class="def">
+    <b>Certyfikat</b> to cyfrowy dowód tożsamości serwera: na jaką nazwę jest wystawiony, do kiedy ważny
+    i kto go podpisał. Twój klient sprawdza go, zanim wyśle cokolwiek ważnego.
+    <b>HTTPS = HTTP wewnątrz TLS.</b>
+  </p>
+  <div class="ev">
+    <b>Twój wynik.</b> <code>subject: CN=*.github.com</code>, <code>expire date: Nov 27 …</code>,
+    <code>issuer: … Sectigo …</code>, <code>SSL certificate verify ok.</code> — trzy pytania i werdykt.
+    Gdy zawodzi: <code>curl: (60) SSL certificate problem: certificate has expired</code>.
+  </div>
+
+  <h3 id="status">kod statusu HTTP <span class="en">— HTTP status code</span></h3>
+  <p class="def">
+    Trzycyfrowa liczba w pierwszej linii odpowiedzi (<code>&lt; HTTP/2 200</code>) — werdykt serwera.
+    Pierwsza cyfra mówi, czyja to sprawa
+    (<a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Status">MDN: HTTP status codes</a>):
+  </p>
+  <table>
+    <thead><tr><th>Klasa</th><th>Znaczy</th><th>Przykłady</th></tr></thead>
+    <tbody>
+      <tr><td><code>2xx</code></td><td>Udało się.</td><td><code>200</code> OK, <code>201</code> Created</td></tr>
+      <tr><td><code>3xx</code></td><td>Idź gdzie indziej.</td><td><code>301</code>, <code>302</code> przekierowanie</td></tr>
+      <tr><td><code>4xx</code></td><td><b>Twój</b> błąd — w żądaniu.</td><td><code>401</code> kim jesteś?, <code>403</code> nie wolno, <code>404</code> nie ma, <code>429</code> za często</td></tr>
+      <tr><td><code>5xx</code></td><td><b>Serwera</b> błąd.</td><td><code>500</code> wywrócił się, <code>502</code>/<code>503</code>/<code>504</code> coś za nim nie działa</td></tr>
+    </tbody>
+  </table>
+  <div class="ev">
+    <b>Pułapka.</b> Kod statusu to <b>nie</b> kod wyjścia. <code>curl</code> po <code>401</code> kończy się
+    kodem wyjścia <code>0</code>, chyba że dasz <code>-f</code>. Patrz <a href="#exitcode">kod wyjścia</a>.
+  </div>
+
+  <h2>Stany i procesy</h2>
+
+  <h3 id="stany">LISTEN &middot; ESTAB &middot; UNCONN</h3>
+  <table>
+    <thead><tr><th>Stan</th><th>Znaczy</th><th>Kiedy widzisz</th></tr></thead>
+    <tbody>
+      <tr><td><code>LISTEN</code></td><td>Drzwi otwarte, nikt jeszcze nie wszedł.</td><td>TCP, z flagą <code>-l</code>.</td></tr>
+      <tr><td><code>ESTAB</code></td><td><i>established</i> — rozmowa trwa, obie strony się dogadały.</td><td>TCP, bez <code>-l</code>.</td></tr>
+      <tr><td><code>UNCONN</code></td><td><i>unconnected</i> — brak połączenia, bo UDP go nie ma.</td><td>UDP, zawsze.</td></tr>
+      <tr><td><code>TIME-WAIT</code></td><td>Połączenie zamknięte, port trzymany jeszcze chwilę.</td><td>Po zakończonych połączeniach.</td></tr>
+    </tbody>
+  </table>
+  <div class="ev">
+    <b>Dlaczego UDP ma <code>UNCONN</code>.</b> To nie usterka. UDP nie zna pojęcia połączenia,
+    więc gniazdo nie ma stanu do pokazania. <b>Stan jest cechą TCP, nie sieci.</b>
+  </div>
+
+  <h3 id="daemon">daemon <span class="en">— usługa w tle</span></h3>
+  <p class="def">
+    Program działający <b>w tle, bez terminala</b>, zwykle uruchamiany przy starcie systemu
+    i czekający na pracę zamiast kończyć się po zadaniu. Nazwy tradycyjnie kończą się na
+    <b><code>d</code></b>: <code>sshd</code>, <code>systemd</code>, <code>systemd-resolved</code>,
+    <code>containerd</code>, <code>dockerd</code>.
+  </p>
+  <p class="def">
+    Nazwa pochodzi z MIT (lata 60., od „demona Maxwella" — niewidzialnego pomocnika pracującego
+    w tle), a <b>nie jest skrótem</b>. Rozwinięcie „Disk And Execution MONitor" dorobiono później.
+  </p>
+  <div class="ev">
+    <b>Twój wynik.</b> <code>man nc</code> mówi o <code>-z</code>: <i>„Only scan for listening
+    <b>daemons</b>"</i> — czyli: szukaj usług czekających w tle. Każdy wiersz <code>LISTEN</code>
+    w Twoim <code>ss</code> to jakiś daemon. <b>Baza danych, którą „wystawiasz", też jest daemonem</b>
+    — pytanie tylko, na jakim adresie nasłuchuje.
+  </div>
+
+  <h3 id="pid">PID i fd <span class="en">— Process ID, file descriptor</span></h3>
+  <p class="def">
+    <b>PID</b> to numer procesu nadany przez jądro — jednoznaczny identyfikator działającego programu.
+    <b>fd</b> to numer, pod którym ten proces trzyma otwarty zasób. W Uniksie <b>wszystko jest plikiem</b>:
+    plik na dysku, gniazdo sieciowe i terminal dostają taki sam numerek.
+  </p>
+  <div class="ev">
+    <b>Twój wynik.</b> <code>users:(("code",pid=4280,fd=62))</code> — program <code>code</code>
+    (VS Code), proces numer 4280, a to gniazdo jest u niego pod numerem 62.
+    Gdy port jest zajęty, <b>to jest kolumna, która mówi, kogo ubić</b>.
+  </div>
+
+  <h2>Powłoka: jak łączy się komendy</h2>
+
+  <h3 id="pipe">pipe <code>|</code> <span class="en">— potok</span></h3>
+  <p class="def">
+    Bierze <b>wyjście</b> komendy po lewej i podaje je jako <b>wejście</b> komendzie po prawej,
+    zamiast wypisywać na ekran. Na tym stoi cała filozofia Uniksa: małe narzędzia robiące jedną
+    rzecz, składane w łańcuch.
+  </p>
+<pre><code>man nc | grep -A3 -- '-z'
+└──┬──┘ │ └────────┬────────┘
+   │    │          └─ 2. …i przeszukaj je zamiast czytać 4000 linii
+   │    └─ 1. weź to, co man chciał wypisać na ekran…
+   └─ nie wypisuje nic sam z siebie</code></pre>
+  <p class="def">
+    Ta sama nazwa, co w „potoku danych" — i dokładnie ta sama idea. <code>|</code> to
+    najmniejszy możliwy pipeline: jeden etap karmi następny.
+  </p>
+
+  <h3 id="stdout">stdout i stderr <span class="en">— standard output / standard error</span></h3>
+  <p class="def">
+    Każdy program ma <b>dwa osobne strumienie wyjścia</b>: <code>stdout</code> na wynik
+    i <code>stderr</code> na komunikaty o błędach i postępie. Na ekranie wyglądają identycznie,
+    bo oba lądują w tym samym oknie — ale to <b>dwa różne kanały</b>.
+  </p>
+  <p class="def">
+    <b><code>|</code> przepuszcza tylko <code>stdout</code>.</b> Dlatego łańcuch potrafi „zgubić"
+    komunikat, który widzisz na ekranie. Żeby złapać też <code>stderr</code>, dopisuje się
+    <code>2&gt;&amp;1</code> („skieruj kanał 2 tam, gdzie kanał 1").
+  </p>
+  <div class="ev">
+    <b>Pułapka z Twojego <code>man nc</code>.</b> Strona mówi: <i>„useful to turn on verbose output
+    <b>to stderr</b> by use this option"</i>. Czyli <code>nc -zv host 443 | grep succeeded</code>
+    <b>nic nie pokaże</b> — komunikat idzie kanałem, którego <code>|</code> nie bierze.
+    Poprawnie: <code>nc -zv host 443 2&gt;&amp;1 | grep succeeded</code>.
+  </div>
+
+  <h3 id="exitcode">kod wyjścia <code>$?</code> <span class="en">— exit code / exit status</span></h3>
+  <p class="def">
+    Liczba, którą każdy program zostawia systemowi po zakończeniu. <b><code>0</code> = sukces</b>,
+    cokolwiek innego = błąd, a <i>jaki</i> błąd — definiuje sekcja <b>EXIT STATUS</b> / <b>EXIT CODES</b>
+    w <code>man</code> danego programu. W powłoce odczytujesz go przez <code>echo $?</code>
+    (<code>$?</code> = kod <b>poprzedniej</b> komendy).
+  </p>
+  <p class="def">
+    Na nim stoi automatyzacja: Airflow, cron, Docker i CI patrzą <b>tylko</b> na kod wyjścia,
+    nie na to, co było na ekranie. <code>;</code> łączy komendy bez względu na kod, <code>&amp;&amp;</code> — tylko po sukcesie.
+  </p>
+  <div class="ev">
+    <b>Twoje kody z lekcji 03.</b> <code>curl</code>: 6 DNS, 7 brak połączenia, 28 timeout, 60 certyfikat, 22 HTTP ≥ 400 z <code>-f</code>.
+    <code>pg_isready</code>: 0 przyjmuje, 1 odrzuca, 2 brak odpowiedzi, 3 nie próbowano.
+  </div>
+
+  <div class="ask">
+    <b>Brakuje terminu?</b> Jeśli w jakimkolwiek wyniku zobaczysz słowo, którego tu nie ma —
+    wklej je do <code>NOTES.md</code> albo napisz wprost. Ten dokument ma rosnąć razem z lekcjami
+    i jest jedynym miejscem, gdzie definicje mają obowiązywać na stałe.
+  </div>
+
+  <nav class="nav">
+    <a href="komendy-diagnostyczne.html">Ściąga: komendy i flagi</a>
+    <a href="adres-polaczenia.html">Ściąga: anatomia adresu</a>
+    <a href="drabina-bledow.html">Ściąga: drabina błędów</a>
+    <a href="../lessons/0002-komendy-litera-po-literze.html">&larr; Lekcja 02</a>
+    <a href="../lessons/0003-drabina-polaczenia.html">&larr; Lekcja 03</a>
+    <a href="../lessons/0004-kto-odpowiada-na-nazwe.html">&larr; Lekcja 04</a>
+    <a href="rozwiazywanie-nazw.html">Ściąga: rozwiązywanie nazw</a>
+  </nav>
+
+</main>
+</body>
+</html>

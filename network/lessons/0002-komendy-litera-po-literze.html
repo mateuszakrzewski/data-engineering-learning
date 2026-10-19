@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cztery komendy, litera po literze</title>
+<link rel="stylesheet" href="../assets/lesson.css">
+<link rel="stylesheet" href="../assets/quiz.css">
+</head>
+<body>
+<main class="page">
+
+  <p class="eyebrow">Lekcja 02 &middot; Sieci dla inżyniera danych</p>
+  <h1>Cztery komendy, litera po literze</h1>
+  <p class="subtitle">Twoje własne wyniki z lekcji 01, rozebrane na części — i każda flaga rozwinięta.</p>
+
+  <div class="goal">
+    <strong>Po tej lekcji</strong>
+    Przeczytasz wynik <code>dig</code>, <code>ss</code>, <code>nc</code> i <code>curl</code> bez zgadywania,
+    będziesz wiedział, od czego jest skrótem każda litera, którą wpisujesz — i sam sprawdzisz dowolną flagę,
+    której nie znasz, zamiast pytać internet.
+  </div>
+
+  <h2>Zasada: nie ma magii, są skróty</h2>
+
+  <p>
+    Uniksowe komendy wyglądają jak zaklęcia, bo są ekstremalnie skrócone — powstawały, gdy każdy znak
+    trzeba było wystukać na teletypie. Ale <b>każda litera jest skrótem od angielskiego słowa</b>.
+    Kiedy raz rozwiniesz flagę, przestajesz ją zapamiętywać i zaczynasz ją rozumieć.
+  </p>
+
+  <p>Źródłem prawdy nie jest Google, tylko dokumentacja, którą masz na dysku:</p>
+
+<pre><code>man ss                 <span class="cmt"># pełna instrukcja (q — wyjście, / — szukaj)</span>
+man ss | grep -A3 -- '-l, --listening'   <span class="cmt"># tylko jedna flaga</span></code></pre>
+
+  <div class="note">
+    <b><code>man</code></b> = <i>manual</i>. <b><code>grep</code></b> = <i>global regular expression print</i>.
+    <b><code>-A3</code></b> = <i>after</i> — pokaż 3 linie po trafieniu. <b><code>--</code></b> mówi
+    „koniec flag, reszta to tekst do szukania" — bez tego <code>grep</code> uznałby <code>-l</code> za własną flagę.
+    Wszystkie długie flagi zaczynają się od <b>dwóch</b> myślników (<code>--listening</code>),
+    krótkie od jednego (<code>-l</code>). To ta sama flaga, dwa zapisy.
+  </div>
+
+  <h2>1. <code>dig</code> — pytanie do DNS</h2>
+
+  <p>
+    <code>man dig</code> mówi krótko: <i>DNS lookup utility</i>. Nazwa jest powszechnie rozwijana jako
+    <b>D</b>omain <b>I</b>nformation <b>G</b>roper — „macacz informacji o domenach". Pochodzi z pakietu
+    BIND 9, czyli od twórców najpopularniejszego serwera DNS.
+  </p>
+
+  <p>Puściłeś to z <code>+short</code>. Zobaczmy, co ta flaga przed Tobą ukryła:</p>
+
+<pre><code>dig api.github.com
+
+<span class="cmt">;; QUESTION SECTION:</span>
+;api.github.com.            IN     A        <span class="cmt">← o co pytam</span>
+
+<span class="cmt">;; ANSWER SECTION:</span>
+api.github.com.    <span class="hl">51</span>     IN     <span class="hl">A</span>      <span class="hl">140.82.121.5</span>
+<span class="cmt">└──── nazwa ────┘  └TTL┘         └typ┘  └─ odpowiedź ─┘</span>
+
+<span class="cmt">;; SERVER: 127.0.0.53#53(127.0.0.53)</span>   <span class="cmt">← KOGO zapytałem</span>
+<span class="cmt">;; Query time: 12 msec</span></code></pre>
+
+  <table>
+    <thead><tr><th>Element</th><th>Rozwinięcie</th><th>Co znaczy</th></tr></thead>
+    <tbody>
+      <tr><td><code>+short</code></td><td>query option, nie flaga</td><td>Opcje <code>dig</code> z plusem sterują <i>zapytaniem i wyglądem</i>. <code>+short</code> = tylko goła odpowiedź.</td></tr>
+      <tr><td><code>A</code></td><td><i>Address</i></td><td>Typ rekordu: „daj adres IPv4 tej nazwy". Domyślny, gdy nie powiesz inaczej.</td></tr>
+      <tr><td><code>IN</code></td><td><i>Internet</i></td><td>Klasa rekordu. W praktyce zawsze <code>IN</code> — relikt czasów, gdy istniały inne sieci.</td></tr>
+      <tr><td><code>51</code></td><td><i>TTL — Time To Live</i></td><td>Ile <b>sekund</b> wolno tę odpowiedź trzymać w cache. Potem trzeba spytać od nowa.</td></tr>
+      <tr><td><code>SERVER:</code></td><td>—</td><td>Kogo <code>dig</code> zapytał. U Ciebie: <code>127.0.0.53#53</code>.</td></tr>
+    </tbody>
+  </table>
+
+  <div class="note">
+    <b>Zamknięcie pętli z lekcji 01.</b> W Twoim <code>ss</code> widniało <code>127.0.0.53%lo:53</code>.
+    To jest <i>dokładnie</i> ten sam adres, który <code>dig</code> raportuje jako <code>SERVER</code>.
+    Pytanie o <code>api.github.com</code> nie poleciało w świat — poszło najpierw do małego resolvera
+    na Twojej własnej maszynie. <b>TTL jest powodem, dla którego „zmiana DNS-u nie działa"</b> —
+    stara odpowiedź siedzi w cache aż do wygaśnięcia.
+  </div>
+
+  <h2>2. <code>ss</code> — kto nasłuchuje</h2>
+
+  <p>
+    <code>man ss</code> żartuje: <i>„another utility to investigate sockets"</i>, ale w opisie mówi wprost —
+    <b>s</b>ocket <b>s</b>tatistics. To następca starego <code>netstat</code>. <b>Socket</b> to para
+    <i>adres + port</i> — jeden konkretny punkt komunikacji.
+  </p>
+
+  <p>Wpisałeś <code>ss -tlnp</code>. Cztery litery, cztery osobne decyzje:</p>
+
+  <table>
+    <thead><tr><th>Flaga</th><th>Długa forma</th><th>Co robi (wg <code>man ss</code>)</th></tr></thead>
+    <tbody>
+      <tr><td><code>-t</code></td><td><code>--tcp</code></td><td>Pokaż gniazda TCP. Bez tego zobaczysz też UDP, Unix sockets i szum.</td></tr>
+      <tr><td><code>-l</code></td><td><code>--listening</code></td><td>Tylko <b>nasłuchujące</b>. „Display only listening sockets — <i>these are omitted by default</i>". Bez <code>-l</code> zobaczysz połączenia <i>nawiązane</i>, a nie otwarte drzwi.</td></tr>
+      <tr><td><code>-n</code></td><td><code>--numeric</code></td><td>Nie zamieniaj numerów portów na nazwy. Bez tego zobaczysz <code>domain</code> zamiast <code>53</code> i <code>https</code> zamiast <code>443</code>.</td></tr>
+      <tr><td><code>-p</code></td><td><code>--processes</code></td><td>Pokaż <b>proces</b> trzymający gniazdo. Często wymaga <code>sudo</code>, żeby zobaczyć cudze procesy.</td></tr>
+      <tr><td><code>-u</code></td><td><code>--udp</code></td><td>Nie użyłeś, ale przyda się — DNS działa głównie po UDP.</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Twój wynik, kolumna po kolumnie</h3>
+
+<pre><code>State    Recv-Q  Send-Q   Local Address:Port    Peer Address:Port   Process
+LISTEN   0       4096     127.0.0.53%lo:53      0.0.0.0:*
+LISTEN   0       511      127.0.0.1:45090       0.0.0.0:*           users:(("code",pid=18184,fd=57))
+LISTEN   0       4096     127.0.0.1:631         0.0.0.0:*
+LISTEN   0       4096     [::1]:631             [::]:*</code></pre>
+
+  <table>
+    <thead><tr><th>Kolumna</th><th>Znaczenie</th></tr></thead>
+    <tbody>
+      <tr><td><code>State</code></td><td><code>LISTEN</code> = drzwi otwarte, czekam. Bez <code>-l</code> zobaczysz też <code>ESTAB</code> (rozmowa trwa) i inne stany TCP.</td></tr>
+      <tr><td><code>Recv-Q</code></td><td><i>Receive queue.</i> Dla gniazda nasłuchującego: ile połączeń <b>czeka na odebranie</b>. Zero = nadążasz.</td></tr>
+      <tr><td><code>Send-Q</code></td><td><i>Send queue.</i> Dla nasłuchującego: <b>maksymalna długość kolejki</b> (backlog). <code>4096</code> to limit, nie zaległość.</td></tr>
+      <tr><td><code>Local Address:Port</code></td><td><b>Najważniejsza kolumna.</b> Na jakim adresie i porcie stoją te drzwi.</td></tr>
+      <tr><td><code>Peer Address:Port</code></td><td>Z kim rozmawia. Dla nasłuchującego <code>0.0.0.0:*</code> = „przyjmę od każdego, kto mnie znajdzie".</td></tr>
+      <tr><td><code>Process</code></td><td>Dzięki <code>-p</code>. <code>users:(("code",pid=18184,fd=57))</code> = program <code>code</code> (VS Code), numer procesu 18184, deskryptor pliku 57.</td></tr>
+    </tbody>
+  </table>
+
+  <p>Trzy zapisy z Twojego wyniku, które wyglądają dziwnie:</p>
+
+  <table>
+    <thead><tr><th>Zapis</th><th>Znaczy</th></tr></thead>
+    <tbody>
+      <tr><td><code>%lo</code></td><td>Doprecyzowanie <b>interfejsu</b>: ten adres żyje na <code>lo</code> (<i>loopback</i>). Zapis <code>adres%interfejs</code> pojawia się, gdy sam adres to za mało.</td></tr>
+      <tr><td><code>[::1]</code></td><td>Pętla zwrotna w <b>IPv6</b> — odpowiednik <code>127.0.0.1</code>. Nawiasy kwadratowe oddzielają adres od portu, bo IPv6 sam zawiera dwukropki.</td></tr>
+      <tr><td><code>*</code></td><td>„Dowolny port". <code>0.0.0.0:*</code> = dowolny adres, dowolny port.</td></tr>
+    </tbody>
+  </table>
+
+  <div class="note">
+    <b>Wniosek z Twojej maszyny:</b> w kolumnie <code>Local Address</code> nie ma ani jednego
+    <code>0.0.0.0</code>. Wszystko stoi na pętli zwrotnej. <b>Twój laptop nie wystawia do sieci
+    niczego</b> — i właśnie dlatego <code>nc -zv 127.0.0.1 53</code> dał <code>refused</code>:
+    pukałeś pod <code>127.0.0.1</code>, a resolver stoi na <code>127.0.0.53</code>.
+  </div>
+
+  <h2>3. <code>nc</code> — zapukaj i nic nie mów</h2>
+
+  <p>
+    <code>nc</code> to <b>netcat</b>: <code>cat</code> dla sieci. Zwykły <code>cat</code> przelewa dane
+    z pliku na ekran; <code>netcat</code> przelewa dane przez połączenie sieciowe.
+    <code>man nc</code>: <i>„arbitrary TCP and UDP connections and listens"</i>.
+  </p>
+
+  <table>
+    <thead><tr><th>Flaga</th><th>Rozwinięcie</th><th>Co robi (wg <code>man nc</code>)</th></tr></thead>
+    <tbody>
+      <tr><td><code>-z</code></td><td><i>zero</i> — zero danych</td><td>„Only scan for listening daemons, <b>without sending any data</b>". Nawiązuje połączenie, sprawdza, czy się udało, i natychmiast rozłącza.</td></tr>
+      <tr><td><code>-v</code></td><td><i>verbose</i></td><td>„Produce more verbose output". <b>Bez tego <code>nc -z</code> nie wypisuje nic</b> — sukces poznasz tylko po kodzie wyjścia.</td></tr>
+      <tr><td><code>-u</code></td><td><i>UDP</i></td><td>Pukaj po UDP zamiast TCP. Domyślnie <code>nc</code> używa TCP.</td></tr>
+      <tr><td><code>-w</code></td><td><i>wait</i></td><td><code>-w 3</code> = poddaj się po 3 sekundach. <b>Lekarstwo na „ciszę"</b> — nie czekasz w nieskończoność.</td></tr>
+    </tbody>
+  </table>
+
+  <p>Dlatego <code>-z</code> jest właściwym narzędziem diagnostycznym: sprawdza <b>wyłącznie</b> warstwę
+     „host + port", nie wysyłając ani bajtu treści. Odpowiada na jedno pytanie — <i>czy ktoś tam jest?</i></p>
+
+<pre><code>nc -zv api.github.com 443       <span class="cmt"># succeeded — ktoś jest</span>
+nc -zv 127.0.0.1 9999           <span class="cmt"># refused    — maszyna odpowiada „nikogo tu nie ma"</span>
+nc -zv -w 3 api.github.com 444  <span class="cmt"># timeout    — cisza, pakiet zniknął (i nie czekasz wiecznie)</span></code></pre>
+
+  <h2>4. <code>curl</code> — cała historia naraz</h2>
+
+  <p>
+    <code>curl</code> = <b>C</b>lient <b>URL</b>. <code>man curl</code>: <i>„transfer a URL"</i>.
+    Flaga <code>-v</code> (<code>--verbose</code>) pokazuje, co dzieje się „under the hood".
+  </p>
+
+  <p>
+    I tu jest rzecz najważniejsza w całej lekcji. <b>Man page dokładnie definiuje trzy znaki</b>
+    na początku linii — i każdy z nich to inna warstwa:
+  </p>
+
+  <table>
+    <thead><tr><th>Znak</th><th>Wg <code>man curl</code></th><th>Warstwa</th></tr></thead>
+    <tbody>
+      <tr><td><code>*</code></td><td>„additional info provided by curl"</td><td><b>Sieć i TLS.</b> Adres IP, port, szyfrowanie, certyfikat.</td></tr>
+      <tr><td><code>&gt;</code></td><td>„header data <b>sent</b> by curl"</td><td><b>HTTP — Twoje żądanie.</b> To, co mówisz.</td></tr>
+      <tr><td><code>&lt;</code></td><td>„header data <b>received</b> by curl"</td><td><b>HTTP — odpowiedź serwera.</b> To, co słyszysz.</td></tr>
+    </tbody>
+  </table>
+
+  <p>Przykładowy przebieg (Twój będzie się różnił adresami i wersjami):</p>
+
+<pre><code>curl -v https://api.github.com/zen
+
+<span class="cmt">*   Trying 140.82.121.5:443...</span>              <span class="hl">← host→IP i port. Lekcja 01.</span>
+<span class="cmt">* Connected to api.github.com (140.82.121.5) port 443</span>
+<span class="cmt">* TLS connection using TLSv1.3 / AEAD-AES128-GCM-SHA256</span>  <span class="hl">← szyfrowanie</span>
+<span class="cmt">* Server certificate: *.github.com</span>          <span class="hl">← dowód tożsamości serwera</span>
+<span class="cmt">&gt; GET /zen HTTP/2</span>                            <span class="hl">← dopiero TUTAJ zaczyna się HTTP</span>
+<span class="cmt">&gt; Host: api.github.com</span>
+<span class="cmt">&gt; user-agent: curl/8.5.0</span>
+<span class="cmt">&gt; accept: */*</span>
+<span class="cmt">&gt;</span>                                            <span class="hl">← pusta linia = koniec nagłówków</span>
+<span class="cmt">&lt; HTTP/2 200</span>                                 <span class="hl">← kod statusu: poszło dobrze</span>
+<span class="cmt">&lt; content-type: text/plain;charset=utf-8</span>
+<span class="cmt">&lt;</span>
+Practicality beats purity.                    <span class="hl">← body, bez żadnego znaku</span></code></pre>
+
+  <div class="note">
+    <b>To jest mapa całego kursu.</b> Gwiazdki to sieć — lekcje 01–02. Linia z <code>&gt; GET</code>
+    i wszystko pod nią to HTTP — kolejne lekcje. Kiedy coś pada, <b>najpierw patrzysz, jak daleko
+    doszły gwiazdki</b>: jeśli nie ma nawet <code>Trying</code>, problem jest w DNS; jeśli jest
+    <code>Trying</code>, ale nie ma <code>Connected</code>, problem jest w porcie albo firewallu.
+  </div>
+
+  <h2>Sprawdź się</h2>
+  <p class="score"></p>
+
+  <div class="quiz">
+    <p class="quiz__q">Uruchamiasz <code>ss -tnp</code> — bez litery <code>l</code>. Co zobaczysz?</p>
+    <div class="quiz__opts">
+      <button class="quiz__opt" data-correct data-why="Man mówi wprost: gniazda nasłuchujące są domyślnie pomijane. Bez -l dostajesz połączenia już nawiązane.">Połączenia już nawiązane</button>
+      <button class="quiz__opt" data-why="Bez -l gniazda nasłuchujące są właśnie pomijane, a nie pokazywane.">Wyłącznie otwarte porty</button>
+      <button class="quiz__opt" data-why="Brak jednej flagi nie powoduje błędu — komenda po prostu pokaże co innego.">Komunikat o błędzie</button>
+      <button class="quiz__opt" data-why="To -n odpowiada za format nazw, nie -l.">Nazwy zamiast numerów</button>
+    </div>
+  </div>
+
+  <div class="quiz">
+    <p class="quiz__q">W wyniku <code>curl -v</code> widzisz <code>* Trying 10.0.3.17:5432...</code> i nic więcej przez 30 sekund. Gdzie jest problem?</p>
+    <div class="quiz__opts">
+      <button class="quiz__opt" data-correct data-why="Trying oznacza, że nazwa została już rozwiązana na IP — DNS zadziałał. Cisza po nim to zaginiony pakiet: firewall albo zła sieć.">Firewall blokuje ruch</button>
+      <button class="quiz__opt" data-why="DNS już zadziałał — inaczej nie byłoby adresu IP w linii Trying.">Nazwa się nie rozwiązała</button>
+      <button class="quiz__opt" data-why="Nie doszło nawet do rozmowy HTTP, więc dane logowania nie mają tu nic do rzeczy.">Hasło jest nieprawidłowe</button>
+      <button class="quiz__opt" data-why="Usługa, która nie stoi, dałaby natychmiastowe refused, a nie ciszę.">Usługa nie jest włączona</button>
+    </div>
+  </div>
+
+  <div class="quiz">
+    <p class="quiz__q">W wyniku <code>dig</code> widzisz przy odpowiedzi liczbę <code>51</code>. Co ona mówi?</p>
+    <div class="quiz__opts">
+      <button class="quiz__opt" data-correct data-why="TTL to Time To Live — liczba sekund, przez które tę odpowiedź wolno trzymać w cache.">Sekundy ważności w cache</button>
+      <button class="quiz__opt" data-why="Czas zapytania dig pokazuje osobno, w linii Query time, w milisekundach.">Czas trwania zapytania</button>
+      <button class="quiz__opt" data-why="Liczba serwerów nie jest w ogóle raportowana w tym miejscu.">Liczba serwerów w puli</button>
+      <button class="quiz__opt" data-why="Priorytet pojawia się przy rekordach MX, nie przy rekordach typu A.">Priorytet tego rekordu</button>
+    </div>
+  </div>
+
+  <div class="recall" data-hint="Wymień je na głos wraz z warstwą, zanim sprawdzisz.">
+    <p class="recall__q">Trzy znaki na początku linii w <code>curl -v</code> — co oznacza każdy i do jakiej warstwy należy?</p>
+    <div class="recall__a">
+      <code>*</code> — informacja od samego <code>curl</code>: <b>sieć i TLS</b> (IP, port, certyfikat).<br>
+      <code>&gt;</code> — nagłówki <b>wysłane</b> przez Ciebie: warstwa HTTP, Twoje żądanie.<br>
+      <code>&lt;</code> — nagłówki <b>odebrane</b> od serwera: warstwa HTTP, odpowiedź.<br>
+      Body odpowiedzi nie ma żadnego znaku — jest wypisywane gołe.
+    </div>
+  </div>
+
+  <div class="recall" data-hint="Cztery litery, cztery słowa.">
+    <p class="recall__q">Rozwiń <code>ss -tlnp</code>.</p>
+    <div class="recall__a">
+      <b>t</b>cp &middot; <b>l</b>istening &middot; <b>n</b>umeric &middot; <b>p</b>rocesses<br>
+      „Pokaż gniazda TCP, tylko nasłuchujące, z numerami zamiast nazw, wraz z procesem."
+    </div>
+  </div>
+
+  <h2>Zrób to w terminalu</h2>
+
+  <div class="task">
+    <h3>Dokończ zaległość z lekcji 01</h3>
+<pre><code>nc -zv 127.0.0.53 53
+curl -v https://api.github.com/zen</code></pre>
+    <p class="note" style="margin:0">
+      Pierwsze powinno dać <code>succeeded</code> — to dowód, że resolver działał cały czas,
+      tylko pod innym adresem. Przy <code>curl</code> policz gwiazdki przed pierwszym <code>&gt;</code>.
+    </p>
+  </div>
+
+  <div class="task">
+    <h3>Zobacz, co ukrywał <code>+short</code></h3>
+<pre><code>dig api.github.com
+dig github.com MX</code></pre>
+    <p class="note" style="margin:0">
+      Znajdź linię <code>SERVER:</code> — potwierdzi, że pytasz własny resolver na <code>127.0.0.53</code>.
+      Drugie zapytanie pyta o rekordy <code>MX</code> (<i>Mail eXchange</i>: gdzie iść z pocztą dla tej domeny)
+      — ten sam mechanizm, inny typ rekordu.
+    </p>
+  </div>
+
+  <div class="task">
+    <h3>Poczuj różnicę, jaką robi każda flaga</h3>
+<pre><code>ss -tl      <span class="cmt"># bez -n: zobacz nazwy usług zamiast numerów portów</span>
+ss -tlnp    <span class="cmt"># Twoja wersja</span>
+ss -tnp     <span class="cmt"># bez -l: nawiązane połączenia zamiast otwartych drzwi</span>
+ss -ulnp    <span class="cmt"># UDP zamiast TCP — tu znajdziesz DNS</span></code></pre>
+    <p class="note" style="margin:0">
+      Odpal przy okazji przeglądarkę z otwartą stroną i zobacz <code>ss -tnp</code> ponownie.
+      Zobaczysz <code>ESTAB</code> i realne adresy serwerów, z którymi rozmawiasz.
+    </p>
+  </div>
+
+  <div class="task">
+    <h3>Sprawdź mnie w <code>man</code></h3>
+<pre><code>man nc | grep -A3 -- '-z'
+man curl | grep -A6 -- '-v, --verbose'</code></pre>
+    <p class="note" style="margin:0">
+      Wszystkie rozwinięcia w tej lekcji pochodzą z tych stron. <b>Sprawdzaj mnie</b> —
+      w lekcji 01 pomyliłem się co do adresu resolvera i to Ty to wykryłeś.
+    </p>
+  </div>
+
+  <div class="source">
+    <span class="label">Źródło do przeczytania</span>
+    Tym razem źródłem jest <b>Twój własny dysk</b>: <code>man ss</code>, <code>man nc</code>, <code>man dig</code>.
+    Man page jest pisany przez autorów narzędzia i opisuje dokładnie tę wersję, którą masz zainstalowaną —
+    nie ma wyżej zaufanego źródła. Naucz się nawigacji: <code>/</code> szuka, <code>n</code> następne trafienie, <code>q</code> wyjście.
+    <br><br>
+    Do tła: <a href="https://jvns.ca/networking-zine.pdf">Julia Evans — Networking! ACK! (PDF, darmowy)</a>,
+    strony o <code>netstat</code>/<code>ss</code> i <code>tcpdump</code>. Cały zin to 20 stron
+    i jest zbudowany dokładnie wokół tej idei: poznawaj sieć przez narzędzia, nie przez diagramy.
+  </div>
+
+  <div class="ask">
+    <b>Pytaj o każdą literę.</b> Jeśli w którymkolwiek wyniku zobaczysz kolumnę, znak albo skrót,
+    którego tu nie rozwinąłem — wklej i rozwiniemy. To samo dotyczy komend, które spotkasz
+    w pracy w Dockerze czy WSL: nie kopiuj ich w ciemno, przynieś je tutaj.
+  </div>
+
+  <nav class="nav">
+    <a href="0001-adres-polaczenia.html">&larr; Lekcja 01: Adres połączenia</a>
+    <a href="../reference/komendy-diagnostyczne.html">Ściąga: komendy i flagi &rarr;</a>
+    <a href="../reference/adres-polaczenia.html">Ściąga: anatomia adresu</a>
+    <a href="../reference/glossary.html">Glosariusz pojęć &rarr;</a>
+    <a href="0003-drabina-polaczenia.html">Lekcja 03: Drabina połączenia &rarr;</a>
+  </nav>
+
+</main>
+<script src="../assets/quiz.js"></script>
+</body>
+</html>

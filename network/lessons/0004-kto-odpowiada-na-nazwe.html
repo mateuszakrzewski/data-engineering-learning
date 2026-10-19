@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kto odpowiada na nazwę</title>
+<link rel="stylesheet" href="../assets/lesson.css">
+<link rel="stylesheet" href="../assets/quiz.css">
+<link rel="stylesheet" href="../assets/chain.css">
+</head>
+<body>
+<main class="page">
+
+  <p class="eyebrow">Lekcja 04 &middot; Sieci dla inżyniera danych</p>
+  <h1>Kto odpowiada na nazwę</h1>
+  <p class="subtitle">Ta sama nazwa w connection stringu działa w jednym miejscu, a w drugim „nie istnieje". To nie magia — to inny resolver.</p>
+
+  <div class="goal">
+    <strong>Po tej lekcji</strong>
+    Patrząc na host w connection stringu (<code>pgdatabase</code>, <code>db</code>, <code>localhost</code>),
+    powiesz, <b>gdzie</b> ta nazwa zostanie zamieniona na adres i czy się uda — na laptopie i w kontenerze.
+    Sprawdzisz to komendą, która pyta dokładnie tak, jak pyta <code>psql</code>.
+    Twój przykład: <code>docker-compose.yml</code> z zoomcampu, w którym pgAdmin łączy się z hostem <code>pgdatabase</code>.
+  </div>
+
+  <h2>Rozgrzewka: najpierw <i>kto mówi</i>, potem szczebel</h2>
+  <p>
+    Trzy komunikaty z pułapką słowną. Zanim klikniesz, powiedz na głos dwie rzeczy po kolei:
+    <b>(1) kto mówi</b> — mój system czy serwer? <b>(2) który szczebel</b>
+    (<a href="../reference/drabina-bledow.html">ściąga drabiny</a>, jeśli trzeba).
+  </p>
+  <p class="score"></p>
+
+  <div class="quiz">
+    <p class="quiz__q"><span class="tag">04.1·1</span> <code>psql: error: connection to server at "pgdatabase" (172.19.0.2), port 5432 failed: Connection refused</code></p>
+    <div class="quiz__opts">
+      <button class="quiz__opt" data-why="DNS przeszedł: w nawiasie jest już adres, na który zamieniono nazwę pgdatabase.">DNS</button>
+      <button class="quiz__opt" data-correct data-why="Mówi system: nie ma FATAL. Nazwa zamieniona na 172.19.0.2, ale na porcie 5432 nikt nie słucha — kontener istnieje, Postgres w nim jeszcze nie wstał albo padł.">TCP</button>
+      <button class="quiz__opt" data-why="Do TLS nie doszło — połączenie TCP nie powstało.">TLS</button>
+      <button class="quiz__opt" data-why="„Refused” to tu odmowa jądra, nie Postgresa. Nie ma FATAL, więc serwer nic nie powiedział.">Auth</button>
+      <button class="quiz__opt" data-why="Nie ma FATAL — Postgres nic nie powiedział.">Aplikacja</button>
+    </div>
+  </div>
+
+  <div class="quiz">
+    <p class="quiz__q"><span class="tag">04.1·2</span> <code>psql: error: connection to server at "localhost" (127.0.0.1), port 5432 failed: FATAL:  no pg_hba.conf entry for host "172.17.0.1", user "root", database "ny_taxi", no encryption</code></p>
+    <div class="quiz__opts">
+      <button class="quiz__opt" data-why="Nazwa localhost została zamieniona na 127.0.0.1, a do tego odezwał się serwer.">DNS</button>
+      <button class="quiz__opt" data-why="Adres w prefiksie to tylko „gdzie próbowałem”. Werdykt jest po failed: — a tam stoi FATAL, czyli słowa Postgresa.">TCP</button>
+      <button class="quiz__opt" data-why="„no encryption” opisuje Twoje połączenie, ale to serwer ocenia tu Ciebie, nie Ty jego certyfikat.">TLS</button>
+      <button class="quiz__opt" data-correct data-why="Mówi serwer (FATAL). pg_hba.conf nie ma reguły dla adresu 172.17.0.1 — zauważ, że to nie 127.0.0.1: Docker podmienił adres nadawcy. Wrócimy do tego w lekcji o wystawianiu bazy.">Auth</button>
+      <button class="quiz__opt" data-why="Nie doszło do pytania o bazę — serwer odprawił Cię przy drzwiach.">Aplikacja</button>
+    </div>
+  </div>
+
+  <div class="quiz">
+    <p class="quiz__q"><span class="tag">04.1·3</span> W <code>curl -v</code>: <code>&lt; HTTP/1.1 503 Service Unavailable</code></p>
+    <div class="quiz__opts">
+      <button class="quiz__opt" data-why="Strzałka &lt; i kod statusu: ktoś odpowiedział po HTTP. Szczeble 1–3 przeszły.">DNS</button>
+      <button class="quiz__opt" data-why="„Unavailable” brzmi jak brak połączenia — ale kod statusu może wysłać tylko ktoś, z kim połączenie już stoi.">TCP</button>
+      <button class="quiz__opt" data-why="Strzałka &lt; i kod statusu: ktoś odpowiedział po HTTP. Szczeble 1–3 przeszły.">TLS</button>
+      <button class="quiz__opt" data-why="503 nie mówi nic o Twojej tożsamości; od tego są 401 i 403.">Auth</button>
+      <button class="quiz__opt" data-correct data-why="Mówi serwer — zwykle proxy albo load balancer stojący przed aplikacją, który odpowiada: „ja jestem, ale aplikacji za mną nie ma”. Grupa 5xx = problem po stronie serwera (MDN: 503 Service Unavailable). Typowe przy restarcie usługi — w potoku: ponów za chwilę.">Aplikacja</button>
+    </div>
+  </div>
+
+  <div class="note">
+    <b>04.1·1 to już dzisiejszy temat.</b> Zauważ <code>"pgdatabase" (172.19.0.2)</code>: <code>psql</code> pokazuje nazwę <i>i</i> adres,
+    na który ją zamienił. Kto mu tę nazwę zamienił — i dlaczego na laptopie by się to nie udało? Reszta lekcji.
+  </div>
+
+  <h2>Pojęcie: pytanie o nazwę przechodzi przez łańcuch</h2>
+
+  <p>
+    Gdy <code>psql</code> dostaje host <code>pgdatabase</code>, sam nie zna żadnego serwera DNS. Prosi o adres
+    <b>bibliotekę systemową</b> (w Linuksie: <i>glibc</i>, funkcja <code>getaddrinfo</code>), a ta przechodzi przez łańcuch
+    źródeł w kolejności zapisanej w pliku konfiguracyjnym. Pierwsze źródło, które zna odpowiedź, wygrywa.
+    Tak to wygląda na Twoim laptopie — każda linia poniżej to prawdziwy wynik z <code>LEGION</code>:
+  </p>
+
+  <ol class="chain">
+    <li class="link">
+      <p class="link__who">psql, curl, Twój potok <span>program</span></p>
+      <p class="link__what">„Potrzebuję adresu dla tej nazwy." Pyta bibliotekę systemową, nie DNS.</p>
+    </li>
+    <li class="link link--skip">
+      <p class="link__who"><code>/etc/nsswitch.conf</code> <span>rozkład jazdy</span></p>
+      <p class="link__what"><i>Name Service Switch</i> — przełącznik źródeł nazw. Linia <code>hosts:</code> mówi, w jakiej kolejności pytać.
+        <code>files</code> = plik <code>/etc/hosts</code>, <code>dns</code> = serwer DNS. Środkowe <code>mdns4_minimal</code> obsługuje tylko nazwy kończące się na <code>.local</code> — pomiń.
+        (<a href="https://man7.org/linux/man-pages/man5/nsswitch.conf.5.html">man nsswitch.conf</a>)</p>
+      <p class="link__proof"><code>hosts:          files mdns4_minimal [NOTFOUND=return] dns</code></p>
+    </li>
+    <li class="link link--skip">
+      <p class="link__who"><code>/etc/hosts</code> <span>lokalna ściąga, źródło <code>files</code></span></p>
+      <p class="link__what">Zwykły plik tekstowy: adres, spacja, nazwa. Nikt o nic nie pyta przez sieć. Tu mieszka nazwa Twojego laptopa.</p>
+      <p class="link__proof"><code>127.0.1.1 LEGION</code></p>
+    </li>
+    <li class="link">
+      <p class="link__who"><code>/etc/resolv.conf</code> → <code>127.0.0.53</code> <span>źródło <code>dns</code></span></p>
+      <p class="link__what">Plik mówi, <b>do jakiego serwera DNS</b> wysłać pytanie. U Ciebie to <code>systemd-resolved</code> — ten sam
+        <code>127.0.0.53:53</code>, który zobaczyłeś w <code>ss -tlnp</code> w <a href="0001-adres-polaczenia.html">lekcji 01</a>. To pośrednik z pamięcią (<a href="../reference/glossary.html#dns">stub resolver</a>).</p>
+      <p class="link__proof"><code>nameserver 127.0.0.53</code></p>
+    </li>
+    <li class="link">
+      <p class="link__who">router <code>192.168.1.1</code> i dalej <span>prawdziwy DNS</span></p>
+      <p class="link__what">Stąd <code>resolvectl status</code>: <code>DNS Servers: 192.168.1.1</code>. Router pyta dalej, aż do serwera autorytatywnego.</p>
+    </li>
+  </ol>
+
+  <h3>Dlaczego <code>dig</code> to nie jest „to, co widzi psql"</h3>
+  <p>
+    <code>dig</code> (<i>domain information groper</i>) nie przechodzi przez <code>nsswitch.conf</code>. Od razu wysyła pakiet
+    do serwera z <code>resolv.conf</code> — <code>man dig</code>: <i>„dig tries each of the servers listed in /etc/resolv.conf"</i>.
+    Dwa przerywane ogniwa powyżej <b>pomija</b>. To narzędzie do pytania <b>DNS-u</b>, a nie do pytania <b>Twojego systemu</b>.
+  </p>
+  <p>
+    Do tego drugiego służy <code>getent</code> — <i>get entries</i>, „pobierz wpisy". <code>man getent</code>:
+    <i>„displays entries from databases supported by the Name Service Switch libraries"</i>. Czyli
+    <code>getent hosts nazwa</code> idzie <b>tym samym łańcuchem co psql</b>. Jeśli <code>getent</code> nie zna nazwy, <code>psql</code> też jej nie pozna.
+  </p>
+
+  <div class="note">
+    <b>Uczciwe zastrzeżenie o Twoim Ubuntu.</b> <code>systemd-resolved</code> sam też czyta <code>/etc/hosts</code>
+    (<a href="https://man7.org/linux/man-pages/man8/systemd-resolved.service.8.html">man systemd-resolved</a>: <i>„The mappings defined in /etc/hosts are resolved to their configured addresses"</i>),
+    więc u Ciebie <code>dig LEGION</code> akurat odpowiada <code>127.0.1.1</code>. Różnicę widać, gdy <code>dig</code> zapyta
+    kogoś innego niż Twój lokalny pośrednik (<code>@1.1.1.1</code>) — albo w kontenerze, gdzie <code>systemd-resolved</code> w ogóle nie ma.
+    Reguła się nie zmienia: <b>chcesz wiedzieć, co zobaczy program — pytaj <code>getent</code></b>.
+  </div>
+
+  <div class="recall" data-hint="Lekcja 03, kod wyjścia curl po 401 bez -f. Ta sama logika.">
+    <p class="recall__q"><span class="tag">04.2</span> <code>dig @1.1.1.1 LEGION</code> zwraca w nagłówku <code>status: NXDOMAIN</code> (nazwa nie istnieje). Jaki będzie kod wyjścia <code>dig</code> — <code>0</code> czy coś innego?</p>
+    <div class="recall__a">
+      <b><code>0</code>.</b> <code>man dig</code>, sekcja RETURN CODES: <i>„0 — DNS response received, including NXDOMAIN status"</i>.
+      Dokładnie jak <code>curl</code> po <code>401</code>: program mówi <b>„dostarczyłem odpowiedź"</b>, nawet jeśli brzmiała „nie ma takiej nazwy".
+      Dwa kanały: serwer DNS → <code>dig</code> (<code>NXDOMAIN</code>) i <code>dig</code> → powłoka (<code>0</code>).
+      Za to <code>getent</code> przy nieznalezionej nazwie zwraca <b><code>2</code></b> (<code>man getent</code>: <i>„One or more supplied key could not be found"</i>) —
+      więc do skryptu, który ma sprawdzić „czy nazwa się rozwiązuje", lepiej nadaje się <code>getent</code>.
+    </div>
+  </div>
+
+  <h2>Kontener ma własny łańcuch</h2>
+  <p>
+    Każdy kontener dostaje <b>własny</b> <code>/etc/resolv.conf</code> i własny <code>/etc/hosts</code>. Dokumentacja Dockera:
+    <i>„Containers that attach to a custom network use Docker's embedded DNS server. The embedded DNS server address is 127.0.0.11"</i>
+    (<a href="https://docs.docker.com/engine/network/#dns-services">Docker: Networking — DNS services</a>).
+    Ten wbudowany serwer zna <b>nazwy kontenerów w tej samej sieci</b>. Twój laptop go nie widzi.
+  </p>
+  <p>Postawiłem na Twoim laptopie sieć <code>lekcja04</code> z bazą o nazwie <code>db</code> i zapytałem z trzech miejsc:</p>
+
+  <table>
+    <thead><tr><th>Skąd pytam</th><th><code>nameserver</code> w <code>resolv.conf</code></th><th><code>getent hosts db</code></th></tr></thead>
+    <tbody>
+      <tr><td>Kontener w sieci <code>lekcja04</code></td><td><code>127.0.0.11</code> — DNS Dockera</td><td><code>172.19.0.2&nbsp;&nbsp;db</code> &middot; kod <code>0</code></td></tr>
+      <tr><td>Kontener w domyślnej sieci <code>bridge</code></td><td><code>8.8.8.8</code>, <code>1.1.1.1</code> — publiczny DNS</td><td>pusto &middot; kod <code>2</code></td></tr>
+      <tr><td>Twój laptop</td><td><code>127.0.0.53</code> — systemd-resolved</td><td>pusto &middot; kod <code>2</code></td></tr>
+    </tbody>
+  </table>
+
+  <p>I ten sam connection string <code>postgresql://postgres:sekret@db:5432/postgres</code>, uruchomiony z dwóch miejsc:</p>
+<pre><code><span class="cmt"># z kontenera w sieci lekcja04</span>
+ ?column?
+----------
+        1
+
+<span class="cmt"># z laptopa</span>
+psql: error: could not translate host name "db" to address: Temporary failure in name resolution</code></pre>
+
+  <p>
+    Stąd jedna reguła, która rozwiązuje większość zagadek z Dockerem:
+    <b>nazwę z connection stringa rozwiązuje maszyna, na której działa program — nie ta, przy której siedzisz</b>.
+    To jest siostra reguły z <a href="0001-adres-polaczenia.html">lekcji 01</a>: <code>localhost</code> znaczy „ja", a „ja" kontenera to kontener.
+    Z tego samego eksperymentu: <code>psql …@localhost:5432</code> uruchomiony w kontenerze obok bazy dał
+    <code>Connection refused</code> — w kontenerze z <code>psql</code> nikt nie słucha na 5432.
+  </p>
+
+  <h3>Compose robi to za Ciebie — i dokładnie tak opisuje to dokumentacja</h3>
+  <p>
+    <code>docker compose up</code> tworzy jedną sieć dla wszystkich serwisów z pliku, a <i>„each service registers its name with an internal DNS server"</i>.
+    Przykład z dokumentacji to wprost Twój problem: <i>„The <code>web</code> service can connect to the database at <code>postgres://db:5432</code>.
+    From the host machine, the same database is accessible at <code>postgres://localhost:8001</code>"</i> —
+    bo w kontenerze liczy się <b>port kontenera</b>, a port hosta <i>„is only used when accessing the service from outside the network"</i>
+    (<a href="https://docs.docker.com/compose/how-tos/networking/">Docker: Networking in Compose</a>).
+  </p>
+  <p>Twój plik z zoomcampu, okrojony do tego, co ważne:</p>
+<pre><code>services:
+  <span class="hl">pgdatabase</span>:              <span class="cmt"># ← nazwa serwisu = nazwa w DNS Dockera</span>
+    image: postgres:18
+    ports:
+      - "5432:5432"          <span class="cmt"># ← HOST:KONTENER — dla laptopa: localhost:5432</span>
+  pgadmin:
+    image: dpage/pgadmin4
+    ports:
+      - "8085:80"
+  kestra:
+    …  url: jdbc:postgresql://<span class="hl">kestra_postgres</span>:5432/kestra   <span class="cmt"># ← nazwa serwisu, port kontenera</span></code></pre>
+
+  <h2>Trening: gdzie to się rozwiąże?</h2>
+  <p>
+    Wszystko działa z pliku powyżej (<code>docker compose up</code>). Przy każdym pytaniu najpierw ustal:
+    <b>na jakiej maszynie działa program?</b> Dopiero potem: czy jej łańcuch zna tę nazwę?
+  </p>
+
+  <div class="note">
+    <b>Dopisane po Twoim treningu (2026-10-14).</b> Dwie rzeczy, których zabrakło przed pytaniami:<br>
+    <b>1. pgAdmin to aplikacja webowa.</b> Przeglądarka na laptopie jest tylko <i>ekranem</i>. Z bazą łączy się
+    <b>serwer pgAdmina</b> w swoim kontenerze — więc to jego łańcuch DNS się liczy, nie laptopa.<br>
+    <b>2. Zły host ≠ błąd DNS.</b> DNS pada tylko wtedy, gdy nazwy <b>nikt nie zna</b>. Jeśli nazwa istnieje, ale wskazuje
+    nie tę maszynę (np. <code>localhost</code> w kontenerze), DNS przechodzi, a pada <b>TCP</b>: tam nikt nie słucha.
+  </div>
+
+  <div class="quiz">
+    <p class="quiz__q"><span class="tag">04.3·1</span> W pgAdminie (<code>localhost:8085</code> w przeglądarce) dodajesz serwer: host <code>pgdatabase</code>, port <code>5432</code>.</p>
+    <div class="quiz__opts">
+      <button class="quiz__opt" data-correct data-why="Formularz wypełniasz w przeglądarce, ale łączy się program pgAdmin — w swoim kontenerze, w sieci compose. Jego DNS (127.0.0.11) zna pgdatabase.">Połączy się</button>
+      <button class="quiz__opt" data-why="To pułapka „gdzie siedzę”. Przeglądarka tylko pokazuje formularz; połączenie nawiązuje pgAdmin w kontenerze, a tam nazwa pgdatabase istnieje.">Padnie: DNS</button>
+      <button class="quiz__opt" data-why="Nazwa wskaże kontener z Postgresem, a ten słucha na 5432 w sieci compose.">Padnie: TCP</button>
+    </div>
+  </div>
+
+  <div class="quiz">
+    <p class="quiz__q"><span class="tag">04.3·2</span> W tym samym formularzu pgAdmina wpisujesz host <code>localhost</code>, port <code>5432</code>.</p>
+    <div class="quiz__opts">
+      <button class="quiz__opt" data-why="To, że z laptopa localhost:5432 działa, nic tu nie znaczy — program działa w kontenerze pgAdmina.">Połączy się</button>
+      <button class="quiz__opt" data-why="localhost zawsze się rozwiązuje — jest w /etc/hosts każdego kontenera (127.0.0.1).">Padnie: DNS</button>
+      <button class="quiz__opt" data-correct data-why="localhost = kontener pgAdmina. Słucha w nim tylko serwer WWW na 80, na 5432 nikt — więc Connection refused. Klasyczny błąd zoomcampu.">Padnie: TCP</button>
+    </div>
+  </div>
+
+  <div class="quiz">
+    <p class="quiz__q"><span class="tag">04.3·3</span> Z terminala na laptopie: <code>psql "postgresql://root:root@pgdatabase:5432/ny_taxi"</code></p>
+    <div class="quiz__opts">
+      <button class="quiz__opt" data-why="Program działa na laptopie, a łańcuch laptopa (/etc/hosts → 127.0.0.53 → router) nie zna nazw z compose.">Połączy się</button>
+      <button class="quiz__opt" data-correct data-why="psql na laptopie pyta systemd-resolved, który o DNS Dockera nic nie wie: could not translate host name „pgdatabase”. Z laptopa użyj localhost:5432 — mapowanie ports.">Padnie: DNS</button>
+      <button class="quiz__opt" data-why="Do pukania nie dojdzie — najpierw trzeba mieć adres, a nazwy nie ma.">Padnie: TCP</button>
+    </div>
+  </div>
+
+  <div class="quiz">
+    <p class="quiz__q"><span class="tag">04.3·4</span> Z terminala na laptopie: <code>psql "postgresql://root:root@localhost:5432/ny_taxi"</code></p>
+    <div class="quiz__opts">
+      <button class="quiz__opt" data-correct data-why="Laptop + localhost + port hosta z ports: „5432:5432” — Docker przekazuje to do kontenera pgdatabase. To jest właśnie „from the host machine” z dokumentacji.">Połączy się</button>
+      <button class="quiz__opt" data-why="localhost jest w /etc/hosts laptopa — zawsze się rozwiązuje.">Padnie: DNS</button>
+      <button class="quiz__opt" data-why="Ktoś słucha na 5432 laptopa: Docker, dzięki mapowaniu ports.">Padnie: TCP</button>
+    </div>
+  </div>
+
+  <div class="quiz">
+    <p class="quiz__q"><span class="tag">04.3·5</span> Odpalasz osobny kontener <b>bez</b> <code>--network</code>: <code>docker run --rm postgres:18 psql "postgresql://root:root@pgdatabase:5432/ny_taxi"</code></p>
+    <div class="quiz__opts">
+      <button class="quiz__opt" data-why="To kontener, ale nie w sieci compose — trafia do domyślnej sieci bridge.">Połączy się</button>
+      <button class="quiz__opt" data-correct data-why="Domyślny bridge nie dostaje DNS-u Dockera (w eksperymencie: nameserver 8.8.8.8, getent kod 2). Publiczny DNS nie zna pgdatabase. Lekarstwo: --network z nazwą sieci compose.">Padnie: DNS</button>
+      <button class="quiz__opt" data-why="Do pukania nie dojdzie — w domyślnej sieci bridge nazwa pgdatabase nie istnieje.">Padnie: TCP</button>
+    </div>
+  </div>
+
+  <div class="recall" data-hint="Jedno zdanie. Kto rozwiązuje nazwę?">
+    <p class="recall__q"><span class="tag">04.4</span> Reguła tej lekcji jednym zdaniem — i komenda, która pokazuje, co zobaczy program (podpowiedź: <i>get entries</i>).</p>
+    <div class="recall__a">
+      <b>Nazwę rozwiązuje maszyna, na której działa program — nie ta, przy której siedzisz.</b>
+      Sprawdzasz <b>tam</b>: <code>getent hosts nazwa</code> (w kontenerze: <code>docker exec nazwa_kontenera getent hosts nazwa</code>).
+    </div>
+  </div>
+
+  <h2>Zrób to w terminalu</h2>
+
+  <div class="task">
+    <h3><span class="tag">04.5</span> <code>getent</code> kontra <code>dig</code> na Twoim laptopie</h3>
+<pre><code>getent hosts LEGION ; echo "kod: $?"
+dig +short LEGION
+dig @1.1.1.1 LEGION ; echo "kod: $?"
+getent hosts nie-ma-takiej-nazwy.example ; echo "kod: $?"</code></pre>
+    <table>
+      <thead><tr><th>Element</th><th>Znaczy</th></tr></thead>
+      <tbody>
+        <tr><td><code>getent</code></td><td><i>get entries</i> — pobierz wpisy z bazy NSS.</td></tr>
+        <tr><td><code>hosts</code></td><td>Nazwa bazy: „nazwy maszyn". Ta sama co linia <code>hosts:</code> w <code>nsswitch.conf</code>. (Inne bazy: <code>passwd</code> — użytkownicy, <code>services</code> — porty.)</td></tr>
+        <tr><td><code>+short</code></td><td>Opcje <code>dig</code> zaczynają się od <code>+</code>, nie od <code>-</code>. Sama odpowiedź.</td></tr>
+        <tr><td><code>@1.1.1.1</code></td><td>„Zapytaj ten serwer" — publiczny DNS Cloudflare, z pominięciem <code>127.0.0.53</code>. Znak <code>@</code> = „u kogo".</td></tr>
+      </tbody>
+    </table>
+    <p class="note" style="margin:0">
+      Przed Enterem przewidź: <b>która linia znajdzie <code>LEGION</code>, a która nie — i jakie będą kody</b>.
+      W trzeciej linii szukaj w nagłówku <code>status:</code> i <code>SERVER:</code> — kogo <code>dig</code> naprawdę zapytał.
+    </p>
+  </div>
+
+  <div class="task">
+    <h3><span class="tag">04.6</span> Zbuduj sieć, w której nazwa istnieje tylko w środku</h3>
+<pre><code>docker network create lekcja04
+docker run -d --rm --name db --network lekcja04 -e POSTGRES_PASSWORD=sekret postgres:18
+docker run --rm --network lekcja04 postgres:18 sh -c 'cat /etc/resolv.conf; getent hosts db; echo "kod: $?"'
+docker run --rm postgres:18 sh -c 'getent hosts db; echo "kod: $?"'
+getent hosts db ; echo "kod: $?"
+docker stop db ; docker network rm lekcja04</code></pre>
+    <table>
+      <thead><tr><th>Element</th><th>Rozwinięcie</th><th>Co robi</th></tr></thead>
+      <tbody>
+        <tr><td><code>network create</code></td><td>—</td><td>Utwórz własną sieć Dockera (<i>user-defined network</i>). Tylko w takiej działa DNS <code>127.0.0.11</code>.</td></tr>
+        <tr><td><code>--name db</code></td><td>—</td><td>Nazwa kontenera = nazwa, pod którą zarejestruje go DNS Dockera.</td></tr>
+        <tr><td><code>--network</code></td><td>—</td><td>Podłącz kontener do tej sieci. Bez tej flagi trafia do domyślnej <code>bridge</code>.</td></tr>
+        <tr><td><code>sh -c '…'</code></td><td><i>shell, command</i></td><td>Zamiast startować Postgresa, uruchom w kontenerze powłokę z tym poleceniem. Apostrofy sprawiają, że <code>$?</code> policzy powłoka <b>w kontenerze</b>, nie Twoja.</td></tr>
+        <tr><td><code>network rm</code></td><td><i>remove</i></td><td>Usuń sieć. Kontenery z <code>--rm</code> znikają same po zatrzymaniu.</td></tr>
+      </tbody>
+    </table>
+    <p class="note" style="margin:0">
+      Pierwszy <code>docker run</code> nic nie pobierze — obraz <code>postgres:18</code> już masz. Przed każdą z trzech linii z <code>getent</code> przewidź kod (<code>0</code> czy <code>2</code>).
+      Jeśli druga linia od razu pokaże pusto — to nie błąd, tylko cała lekcja w jednym wyniku.
+    </p>
+  </div>
+
+  <section class="respond">
+    <h2>Odpowiedz w czacie</h2>
+    <p class="note" style="margin:.2rem 0 .6rem">Wklej odpowiedzi po numerach. Surowe wyniki z terminala są najcenniejsze. Zapiszę je w repo.</p>
+    <ol class="respond__list">
+      <li><span class="respond__id">04.1</span> <b>Rozgrzewka</b> — wynik z „Skopiuj dla nauczyciela" i przy każdym z trzech: kogo nazwałeś mówiącym, <i>zanim</i> kliknąłeś.</li>
+      <li><span class="respond__id">04.2</span> <b>Z pamięci</b> — kod wyjścia <code>dig</code> po <code>NXDOMAIN</code>, zanim kliknąłeś „Pokaż".</li>
+      <li><span class="respond__id">04.3</span> <b>Trening</b> — wynik z „Skopiuj dla nauczyciela".</li>
+      <li><span class="respond__id">04.4</span> <b>Z pamięci</b> — reguła jednym zdaniem i komenda, zanim kliknąłeś „Pokaż".</li>
+      <li><span class="respond__id">04.5</span> <b>Terminal</b> — przewidywania → faktyczne wyniki i kody dla czterech linii. Kogo zapytał <code>dig</code> w trzeciej?</li>
+      <li><span class="respond__id">04.6</span> <b>Terminal</b> — <code>nameserver</code> z kontenera w sieci <code>lekcja04</code> i trzy kody <code>getent</code> (przewidziany → faktyczny).</li>
+      <li><span class="respond__id">04.7</span> <b>Ćwiczenie umysłowe</b> — Airflow chodzi w <code>docker compose</code>. W tym samym pliku jest serwis
+        <code>dwh</code> (Postgres) z <code>ports: "5433:5432"</code>. Kolega sprawdził z laptopa
+        <code>postgresql://etl:x@localhost:5433/dwh</code> — działa — i wkleił to samo w Connection w Airflow. Task pada.
+        <ol>
+          <li>Na której maszynie działa ten <code>psql</code>/sterownik i co tam znaczy <code>localhost</code>?</li>
+          <li>Jakiego błędu i szczebla się spodziewasz?</li>
+          <li>Jak powinien wyglądać poprawny host i port — i dlaczego port jest inny niż na laptopie?</li>
+        </ol></li>
+      <li><span class="respond__id">04.8</span> <b>Refleksja</b> — pytania, zaskoczenia, co było niejasne. Czy trafiłeś kiedyś w pracy (WSL2 + Docker) na błąd, który teraz umiesz wyjaśnić?</li>
+    </ol>
+  </section>
+
+  <div class="source">
+    <span class="label">Źródło do przeczytania</span>
+    <a href="https://docs.docker.com/compose/how-tos/networking/">Docker: Networking in Compose</a> —
+    jedna krótka strona od twórców Dockera. Obejmuje dokładnie to, co ćwiczysz w pracy: nazwy serwisów jako hosty,
+    <code>HOST_PORT</code> kontra <code>CONTAINER_PORT</code>, kilka sieci w jednym pliku. Czytaj ze swoim <code>docker-compose.yml</code> z zoomcampu obok.
+    <br><br>
+    Do tła: <a href="https://wizardzines.com/zines/dns/">Julia Evans — How DNS Works</a> (rysunkowo: resolver, cache, TTL)
+    oraz lokalnie <code>man getent</code> i <code>man nsswitch.conf</code> — dwa krótkie, najbardziej zaufane opisy łańcucha z tej lekcji.
+  </div>
+
+  <div class="ask">
+    <b>Pytaj o wszystko.</b> Jeśli coś w łańcuchu jest niejasne — dlaczego <code>localhost</code> zawsze się rozwiązuje, co robi
+    <code>mdns4_minimal</code>, jak to wygląda w WSL2 — napisz w czacie. Jestem Twoim nauczycielem; najlepiej przynieś
+    prawdziwy błąd z pracy z nazwą hosta w środku, rozbierzemy go razem.
+  </div>
+
+  <nav class="nav">
+    <a href="0003-drabina-polaczenia.html">&larr; Lekcja 03: Drabina połączenia</a>
+    <a href="../reference/rozwiazywanie-nazw.html">Ściąga: rozwiązywanie nazw &rarr;</a>
+    <a href="../reference/glossary.html">Glosariusz pojęć</a>
+    <a href="../reference/komendy-diagnostyczne.html">Ściąga: komendy i flagi</a>
+  </nav>
+
+</main>
+<script src="../assets/quiz.js"></script>
+</body>
+</html>

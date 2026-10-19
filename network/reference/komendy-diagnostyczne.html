@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Komendy i flagi</title>
+<link rel="stylesheet" href="../assets/lesson.css">
+<style>
+  .page { max-width: 52rem; padding-top: 2.2rem; }
+  h2 { margin: 1.7rem 0 .6rem; padding-top: .8rem; }
+  table { font-size: .8rem; margin-bottom: .9rem; }
+  th, td { padding: .38rem .55rem; }
+  pre { font-size: .76rem; padding: .75rem .9rem; margin-bottom: .8rem; }
+  kbd { font-family: var(--mono); font-size: .78em; border: 1px solid var(--rule);
+        border-bottom-width: 2px; border-radius: 3px; padding: .05em .4em; background: var(--bg); }
+  @media print { body { font-size: 9pt; } h1 { font-size: 19pt; } }
+</style>
+</head>
+<body>
+<main class="page">
+
+  <p class="eyebrow">Ściąga &middot; Sieci dla inżyniera danych</p>
+  <h1>Komendy i flagi</h1>
+  <p class="subtitle">Każda litera rozwinięta. Źródło: <code>man</code> na Twojej maszynie.</p>
+
+  <div class="note">
+    <b>Złota zasada:</b> nie kopiuj komendy, której flag nie umiesz rozwinąć.
+    <code>man &lt;komenda&gt;</code> &middot; w środku: <kbd>/</kbd> szukaj, <kbd>n</kbd> następne, <kbd>q</kbd> wyjdź.<br>
+    Jedna flaga bez czytania całości: <code>man ss | grep -A3 -- '-l, --listening'</code>
+    (<code>--</code> = „koniec flag, dalej tekst do szukania").
+  </div>
+
+  <div class="note" style="margin-bottom:1.4rem">
+    <b>Pojęcia kanoniczne</b> (socket, TCP, UDP, daemon, pipe, IPv4/IPv6) mają osobną ściągę:
+    <a href="glossary.html">Glosariusz</a>.
+  </div>
+
+  <h2><code>dig</code> — pytanie do DNS</h2>
+  <p class="note" style="margin-bottom:.6rem">
+    <i>DNS lookup utility</i> (pakiet BIND 9); nazwa rozwijana jako <b>D</b>omain <b>I</b>nformation <b>G</b>roper.
+    Opcje z <b>plusem</b> to query options, z myślnikiem — zwykłe flagi.
+  </p>
+  <table>
+    <thead><tr><th>Opcja</th><th>Rozwinięcie</th><th>Efekt</th></tr></thead>
+    <tbody>
+      <tr><td><code>+short</code></td><td>short</td><td>Sama odpowiedź, bez ceremonii.</td></tr>
+      <tr><td><code>+trace</code></td><td>trace</td><td>Pokaż całą drogę od serwerów głównych w dół — widać, gdzie pytanie ginie.</td></tr>
+      <tr><td><code>@1.1.1.1</code></td><td>—</td><td>Zapytaj <b>ten</b> serwer, z pominięciem lokalnego. Test: „czy to mój cache kłamie?"</td></tr>
+      <tr><td><code>A</code> / <code>AAAA</code></td><td>Address</td><td>Adres IPv4 / IPv6. <code>A</code> jest domyślne.</td></tr>
+      <tr><td><code>CNAME</code></td><td>Canonical Name</td><td>Alias: „ta nazwa to tak naprawdę tamta". Typowe w chmurze.</td></tr>
+      <tr><td><code>MX</code></td><td>Mail eXchange</td><td>Gdzie iść z pocztą dla tej domeny.</td></tr>
+      <tr><td><code>NS</code></td><td>Name Server</td><td>Kto jest autorytetem dla tej domeny.</td></tr>
+      <tr><td><code>TXT</code></td><td>Text</td><td>Dowolny tekst — weryfikacja domeny, SPF.</td></tr>
+    </tbody>
+  </table>
+  <table>
+    <thead><tr><th>W wyniku</th><th>Znaczy</th></tr></thead>
+    <tbody>
+      <tr><td><code>TTL</code> (liczba przy odpowiedzi)</td><td><i>Time To Live</i> — <b>sekundy</b> ważności w cache. Powód, dla którego zmiana DNS „nie działa od razu".</td></tr>
+      <tr><td><code>IN</code></td><td><i>Internet</i> — klasa rekordu. Zawsze <code>IN</code>.</td></tr>
+      <tr><td><code>SERVER:</code></td><td>Kogo <code>dig</code> faktycznie zapytał. Na Ubuntu zwykle <code>127.0.0.53#53</code>.</td></tr>
+      <tr><td><code>NXDOMAIN</code></td><td><i>Non-eXistent domain</i> — nazwa nie istnieje.</td></tr>
+      <tr><td><code>SERVFAIL</code></td><td>Serwer DNS spróbował i poległ. Inny problem niż <code>NXDOMAIN</code>.</td></tr>
+    </tbody>
+  </table>
+
+  <h2><code>getent</code> — zapytaj tak, jak zapyta program</h2>
+  <p class="note" style="margin-bottom:.6rem">
+    <b>get entries</b> — pobierz wpisy z baz <i>Name Service Switch</i> (<code>/etc/nsswitch.conf</code>).
+    Przechodzi ten sam łańcuch co <code>psql</code>/<code>curl</code>: <code>/etc/hosts</code>, potem DNS. <code>dig</code> pomija <code>/etc/hosts</code> i <code>nsswitch.conf</code>.
+  </p>
+  <table>
+    <thead><tr><th>Element</th><th>Znaczy</th></tr></thead>
+    <tbody>
+      <tr><td><code>getent hosts nazwa</code></td><td>Baza <code>hosts</code>: adres dla nazwy. Kod <code>0</code> = znaleziono, <code>2</code> = nie znaleziono (<code>man getent</code>).</td></tr>
+      <tr><td><code>docker exec K getent hosts nazwa</code></td><td>To samo, ale z łańcucha kontenera <code>K</code>. Nazwy z compose istnieją tylko tam.</td></tr>
+      <tr><td><code>dig</code> — kod wyjścia</td><td><code>0</code> także przy <code>NXDOMAIN</code> (<code>man dig</code>, RETURN CODES). Jak <code>curl</code> po 401.</td></tr>
+    </tbody>
+  </table>
+
+  <h2><code>ss</code> — socket statistics</h2>
+  <p class="note" style="margin-bottom:.6rem">
+    Następca <code>netstat</code>. <b>Socket</b> = para adres + port, czyli jeden punkt komunikacji.
+  </p>
+  <table>
+    <thead><tr><th>Flaga</th><th>Długa</th><th>Efekt</th></tr></thead>
+    <tbody>
+      <tr><td><code>-t</code></td><td><code>--tcp</code></td><td>Gniazda TCP.</td></tr>
+      <tr><td><code>-u</code></td><td><code>--udp</code></td><td>Gniazda UDP (tu żyje DNS).</td></tr>
+      <tr><td><code>-l</code></td><td><code>--listening</code></td><td>Tylko nasłuchujące. <b>Domyślnie pomijane!</b></td></tr>
+      <tr><td><code>-n</code></td><td><code>--numeric</code></td><td>Numery portów zamiast nazw usług.</td></tr>
+      <tr><td><code>-p</code></td><td><code>--processes</code></td><td>Który proces trzyma gniazdo (często wymaga <code>sudo</code>).</td></tr>
+      <tr><td><code>-a</code></td><td><code>--all</code></td><td>Nasłuchujące <b>i</b> nawiązane naraz.</td></tr>
+    </tbody>
+  </table>
+  <table>
+    <thead><tr><th>Kolumna / zapis</th><th>Znaczy</th></tr></thead>
+    <tbody>
+      <tr><td><code>LISTEN</code></td><td>Drzwi otwarte, czekam na połączenia.</td></tr>
+      <tr><td><code>ESTAB</code></td><td>Połączenie nawiązane, rozmowa trwa.</td></tr>
+      <tr><td><code>TIME-WAIT</code></td><td>Zamknięte, ale system pilnuje portu jeszcze chwilę. Normalne.</td></tr>
+      <tr><td><code>Recv-Q</code></td><td>Przy <code>LISTEN</code>: ile połączeń czeka na odebranie. Rosnące = usługa nie nadąża.</td></tr>
+      <tr><td><code>Send-Q</code></td><td>Przy <code>LISTEN</code>: maksymalna kolejka (backlog). To limit, nie zaległość.</td></tr>
+      <tr><td><code>Local Address:Port</code></td><td><b>Najważniejsze.</b> Gdzie naprawdę stoją drzwi. Nie zgaduj — czytaj.</td></tr>
+      <tr><td><code>*</code></td><td>„Dowolny". <code>0.0.0.0:*</code> = dowolny adres, dowolny port.</td></tr>
+      <tr><td><code>%lo</code></td><td>Adres żyje na interfejsie <code>lo</code> (loopback). Zapis <code>adres%interfejs</code>.</td></tr>
+      <tr><td><code>[::1]</code></td><td>Pętla zwrotna IPv6. Nawiasy oddzielają adres od portu (IPv6 ma własne dwukropki).</td></tr>
+    </tbody>
+  </table>
+
+  <h2><code>nc</code> — netcat</h2>
+  <p class="note" style="margin-bottom:.6rem"><code>cat</code> dla sieci. Domyślnie TCP.</p>
+  <table>
+    <thead><tr><th>Flaga</th><th>Rozwinięcie</th><th>Efekt</th></tr></thead>
+    <tbody>
+      <tr><td><code>-z</code></td><td>zero danych</td><td>Tylko sprawdź, czy port odpowiada — nie wysyłaj nic.</td></tr>
+      <tr><td><code>-v</code></td><td>verbose</td><td><b>Konieczne</b> — bez niego <code>-z</code> milczy.</td></tr>
+      <tr><td><code>-w N</code></td><td>wait</td><td>Poddaj się po N sekundach. Lekarstwo na zawieszenie.</td></tr>
+      <tr><td><code>-u</code></td><td>UDP</td><td>Pukaj po UDP.</td></tr>
+      <tr><td><code>-l</code></td><td>listen</td><td>Sam zostań serwerem — do testów „czy firewall mnie przepuści".</td></tr>
+    </tbody>
+  </table>
+<pre><code>nc -zv <span class="cmt">-w 3</span> db.firma.pl 5432    <span class="cmt"># standardowy test portu bazy</span></code></pre>
+
+  <h2><code>curl</code> — Client URL</h2>
+  <table>
+    <thead><tr><th>Flaga</th><th>Rozwinięcie</th><th>Efekt</th></tr></thead>
+    <tbody>
+      <tr><td><code>-v</code></td><td><code>--verbose</code></td><td>Pokaż, co dzieje się pod spodem.</td></tr>
+      <tr><td><code>-I</code></td><td><code>--head</code></td><td>Tylko nagłówki odpowiedzi, bez treści.</td></tr>
+      <tr><td><code>-s</code></td><td><code>--silent</code></td><td>Bez paska postępu — do skryptów.</td></tr>
+      <tr><td><code>-L</code></td><td><code>--location</code></td><td>Idź za przekierowaniem (3xx).</td></tr>
+      <tr><td><code>-o</code></td><td><code>--output</code></td><td>Zapisz do pliku.</td></tr>
+      <tr><td><code>-H</code></td><td><code>--header</code></td><td>Dołóż własny nagłówek (np. token).</td></tr>
+      <tr><td><code>-X</code></td><td><code>--request</code></td><td>Wymuś metodę HTTP (<code>POST</code>, <code>PUT</code>…).</td></tr>
+      <tr><td><code>-d</code></td><td><code>--data</code></td><td>Wyślij treść (implikuje <code>POST</code>).</td></tr>
+      <tr><td><code>-f</code></td><td><code>--fail</code></td><td>Status HTTP ≥ 400 → kod wyjścia <code>22</code>. <b>Bez tego 401/404 kończą się kodem 0.</b> Obowiązkowe w potokach.</td></tr>
+    </tbody>
+  </table>
+  <table>
+    <thead><tr><th>Znak w <code>-v</code></th><th>Kierunek</th><th>Wg <code>man curl</code></th><th>Warstwa</th></tr></thead>
+    <tbody>
+      <tr><td><code>*</code></td><td>— komentarz curla</td><td>info od curl</td><td>Sieć i TLS: IP, port, certyfikat.</td></tr>
+      <tr><td><code>&gt;</code></td><td><b>ode mnie →</b></td><td>nagłówki wysłane</td><td>HTTP — żądanie.</td></tr>
+      <tr><td><code>&lt;</code></td><td><b>← do mnie</b></td><td>nagłówki odebrane</td><td>HTTP — nagłówki odpowiedzi.</td></tr>
+      <tr><td><span class="cmt">(brak)</span></td><td>← do mnie</td><td>—</td><td>Body odpowiedzi.</td></tr>
+    </tbody>
+  </table>
+
+  <h2><code>pg_isready</code> — czy PostgreSQL gotowy?</h2>
+  <table>
+    <thead><tr><th>Flaga / kod</th><th>Rozwinięcie</th><th>Znaczy</th></tr></thead>
+    <tbody>
+      <tr><td><code>-h</code></td><td><code>--host</code></td><td>Adres serwera.</td></tr>
+      <tr><td><code>-p</code></td><td><code>--port</code></td><td>Port (domyślnie 5432). Uwaga: w <code>ss</code> <code>-p</code> = processes.</td></tr>
+      <tr><td>kod <code>0</code></td><td>—</td><td>Przyjmuje połączenia.</td></tr>
+      <tr><td>kod <code>1</code></td><td>—</td><td>Odrzuca (np. w trakcie startu).</td></tr>
+      <tr><td>kod <code>2</code></td><td>—</td><td>Brak odpowiedzi — szczebel TCP.</td></tr>
+      <tr><td>kod <code>3</code></td><td>—</td><td>Nie próbowano (złe parametry).</td></tr>
+    </tbody>
+  </table>
+<pre><code>pg_isready -h 127.0.0.1 -p 55432 ; echo "kod: $?"   <span class="cmt"># bez hasła; sprawdza TCP + czy to Postgres</span></code></pre>
+
+  <h2>Algorytm: coś nie działa</h2>
+  <table>
+    <thead><tr><th>#</th><th>Pytanie</th><th>Komenda</th><th>Jeśli źle</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td>Czy nazwa rozwiązuje się na IP?</td><td><code>dig +short &lt;host&gt;</code></td><td>Problem DNS: literówka, zła sieć, brak rekordu.</td></tr>
+      <tr><td>2</td><td>Czy port odpowiada?</td><td><code>nc -zv -w 3 &lt;host&gt; &lt;port&gt;</code></td><td><code>refused</code> → usługa/port. <code>timeout</code> → firewall/droga.</td></tr>
+      <tr><td>3</td><td>(lokalnie) Na jakim adresie to stoi?</td><td><code>ss -tlnp</code></td><td><code>127.0.0.1</code> zamiast <code>0.0.0.0</code> → niewidoczne z zewnątrz.</td></tr>
+      <tr><td>4</td><td>Czy rozmowa się udaje?</td><td><code>curl -v &lt;url&gt;</code></td><td>Patrz, jak daleko doszły gwiazdki.</td></tr>
+    </tbody>
+  </table>
+  <div class="note">
+    <b>Nie zaczynaj od końca.</b> Odmowa (<code>refused</code>, natychmiast) = problem <i>usługi</i>.
+    Cisza (timeout) = problem <i>drogi</i>. Nigdy nie szukaj firewalla przy <code>refused</code>
+    i nigdy nie restartuj usługi przy timeoucie.
+  </div>
+
+  <nav class="nav">
+    <a href="../lessons/0002-komendy-litera-po-literze.html">&larr; Lekcja 02</a>
+    <a href="../lessons/0003-drabina-polaczenia.html">&larr; Lekcja 03</a>
+    <a href="drabina-bledow.html">Ściąga: drabina błędów</a>
+    <a href="adres-polaczenia.html">Ściąga: anatomia adresu</a>
+    <a href="../lessons/0004-kto-odpowiada-na-nazwe.html">&larr; Lekcja 04</a>
+    <a href="rozwiazywanie-nazw.html">Ściąga: rozwiązywanie nazw</a>
+    <a href="glossary.html">Glosariusz</a>
+  </nav>
+
+</main>
+</body>
+</html>

@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SELECT i ziarno</title>
+<link rel="stylesheet" href="../../assets/lesson.css">
+</head>
+<body>
+<main class="page">
+<p class="eyebrow">SQL · Ściąga</p>
+<h1>SELECT i ziarno</h1>
+<p class="subtitle">Pytanie numer jeden do każdej tabeli: co oznacza jeden wiersz?</p>
+
+<h2>Szkielet zapytania (kolejność stała)</h2>
+<pre><code>SELECT kolumna1, kolumna2          <span class="cmt">-- które kolumny (* = wszystkie)</span>
+FROM `projekt.zbiór.tabela`        <span class="cmt">-- z której tabeli</span>
+WHERE kolumna = 'tekst'            <span class="cmt">-- tylko wiersze, dla których warunek jest prawdziwy</span>
+ORDER BY kolumna DESC              <span class="cmt">-- sortuj; DESC = malejąco (daty: najnowsze na górze)</span>
+LIMIT 10;                          <span class="cmt">-- najwyżej 10 wierszy</span></code></pre>
+
+<table>
+  <thead><tr><th>Słowo</th><th>Rozwinięcie</th><th>Co robi</th></tr></thead>
+  <tbody>
+    <tr><td><code>SELECT</code></td><td><em>wybierz</em></td><td>lista kolumn wyniku; <code>*</code> = wszystkie</td></tr>
+    <tr><td><code>FROM</code></td><td><em>z</em></td><td>tabela źródłowa</td></tr>
+    <tr><td><code>WHERE</code></td><td><em>gdzie</em></td><td>filtr wierszy</td></tr>
+    <tr><td><code>ORDER BY … [DESC]</code></td><td><em>uporządkuj według</em>, <em>descending</em></td><td>sortowanie; domyślnie rosnąco</td></tr>
+    <tr><td><code>LIMIT n</code></td><td></td><td>najwyżej n wierszy; bez <code>ORDER BY</code> — dowolne n</td></tr>
+  </tbody>
+</table>
+
+<h2>Pułapki</h2>
+<table>
+  <tbody>
+    <tr><td><code>'Returned'</code> ≠ <code>'returned'</code></td><td>tekst rozróżnia wielkość liter → 0 wierszy, <b>bez błędu</b>, kod wyjścia 0</td></tr>
+    <tr><td><code>status = Returned</code></td><td>bez apostrofów to nazwa kolumny → <code>Unrecognized name</code></td></tr>
+    <tr><td><code>'…'</code> vs <code>`…`</code></td><td>apostrof = wartość tekstowa; grawis (BigQuery) = nazwa z myślnikami</td></tr>
+    <tr><td><code>SELECT * … LIMIT 10</code></td><td>BigQuery czyta kolumny w całości: koszt zależy od kolumn, nie od <code>LIMIT</code></td></tr>
+  </tbody>
+</table>
+
+<h2>Nazwy tabel</h2>
+<table>
+  <tbody>
+    <tr><td>BigQuery</td><td><code>`projekt.zbiór.tabela`</code></td><td><code>`bigquery-public-data.thelook_ecommerce.orders`</code></td></tr>
+    <tr><td>Snowflake</td><td><code>baza.schemat.tabela</code></td><td></td></tr>
+  </tbody>
+</table>
+
+<h2>TheLook: ziarno tabel</h2>
+<table>
+  <thead><tr><th>Tabela</th><th>Jeden wiersz =</th><th>Klucz / ważne kolumny</th></tr></thead>
+  <tbody>
+    <tr><td><code>orders</code></td><td>jedno zamówienie</td><td><code>order_id</code>, <code>user_id</code>, <code>status</code>, <code>created_at</code>, <code>shipped_at</code>, <code>delivered_at</code>, <code>returned_at</code>, <code>num_of_item</code></td></tr>
+    <tr><td><code>order_items</code></td><td>jedna pozycja zamówienia</td><td><code>id</code>, <code>order_id</code> (powtarza się), <code>product_id</code>, <code>status</code>, <code>sale_price</code></td></tr>
+  </tbody>
+</table>
+<p class="note">Statusy w <code>orders</code> (15.10.2026): Shipped, Complete, Processing, Cancelled, Returned.
+<code>num_of_item</code> = liczba wierszy w <code>order_items</code> dla wszystkich 125 004 zamówień (sprawdzone).</p>
+
+<p class="note">Źródła: <a href="https://www.postgresql.org/docs/current/tutorial-select.html">PostgreSQL Tutorial 2.5</a> ·
+<a href="https://docs.cloud.google.com/bigquery/docs/best-practices-performance-compute">BigQuery — Avoid SELECT *</a> ·
+<a href="https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/grain/">Kimball — Grain</a> ·
+lekcja <a href="../lessons/0001-co-oznacza-jeden-wiersz.html">SQL 01</a></p>
+</main>
+</body>
+</html>

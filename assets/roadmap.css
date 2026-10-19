@@ -1,0 +1,76 @@
+/* ==========================================================================
+   Mapa ścieżki: fazy × tory. Używa tokenów z lesson.css.
+   <div class="phases">
+     <div class="phase">
+       <div class="phase__n">Faza 1</div>
+       <div class="track"> <div class="dom dom--active">…</div> </div>
+       <div class="track"> … </div>
+     </div>
+   </div>
+   Statusy: dom--done, dom--active, dom--paused, dom--queued
+   ========================================================================== */
+
+.phases { margin: 0 0 1.6rem; font-family: var(--sans); }
+
+.phases__head, .phase {
+  display: grid;
+  grid-template-columns: 4.6rem 1fr 1fr;
+  gap: .7rem;
+}
+.phases__head {
+  font-size: .68rem; letter-spacing: .12em; text-transform: uppercase;
+  color: var(--ink-soft); font-weight: 600;
+  padding-bottom: .4rem; border-bottom: 1.5px solid var(--ink-soft);
+}
+.phase { padding: .8rem 0; border-bottom: 1px solid var(--rule); }
+.phase__n { font-size: .78rem; font-weight: 650; color: var(--ink-soft); padding-top: .55rem; }
+.track { display: flex; flex-direction: column; gap: .45rem; }
+
+.dom {
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  padding: .5rem .7rem .55rem;
+  background: var(--bg);
+  font-size: .84rem;
+  line-height: 1.45;
+}
+.dom__name { font-weight: 650; display: block; }
+.dom__name code { font-size: .78em; }
+.dom__why { color: var(--ink-soft); font-size: .78rem; display: block; margin-top: .15rem; }
+.dom__badge {
+  float: right; font-size: .62rem; letter-spacing: .1em; text-transform: uppercase;
+  font-weight: 700; padding: .05rem .4rem; border-radius: 3px; margin-left: .4rem;
+}
+
+.dom--active { border-color: var(--accent); background: var(--accent-bg); }
+.dom--active .dom__badge { color: var(--bg); background: var(--accent); }
+.dom--done .dom__badge   { color: var(--ok); background: var(--ok-bg); }
+.dom--paused { border-style: dashed; }
+.dom--paused .dom__badge { color: var(--ink-soft); border: 1px solid var(--rule); }
+.dom--queued { opacity: .78; }
+.dom--queued .dom__badge { color: var(--ink-soft); }
+
+.legend { display: flex; flex-wrap: wrap; gap: .5rem 1rem; font-family: var(--sans);
+  font-size: .75rem; color: var(--ink-soft); margin: 0 0 2rem; }
+.legend span::before { content: ""; display: inline-block; width: .8em; height: .8em;
+  border-radius: 2px; margin-right: .35em; vertical-align: -1px; border: 1px solid var(--rule); }
+.legend .l-active::before { background: var(--accent); border-color: var(--accent); }
+.legend .l-paused::before { border-style: dashed; }
+.legend .l-done::before { background: var(--ok-bg); border-color: var(--ok); }
+
+.cmd { font-family: var(--mono); font-size: .82rem; background: var(--code-bg);
+  border: 1px solid var(--rule); border-radius: 5px; padding: .7rem .9rem; margin: 0 0 .6rem;
+  overflow-x: auto; white-space: pre; }
+
+@media (max-width: 40rem) {
+  .phases__head { display: none; }
+  .phase { grid-template-columns: 1fr; gap: .45rem; }
+  .phase__n { padding-top: 0; }
+  .track::before { font-size: .66rem; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-soft); }
+  .track--a::before { content: "Tor A — fundament IT"; }
+  .track--b::before { content: "Tor B — dane"; }
+}
+@media print {
+  .dom { break-inside: avoid; }
+  .phase { break-inside: avoid; }
+}

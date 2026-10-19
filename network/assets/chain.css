@@ -1,0 +1,90 @@
+/* ==========================================================================
+   Komponent: łańcuch przekazań („kto pyta kogo dalej").
+   Pionowa lista ogniw połączonych strzałkami. Każde ogniwo: kto / co robi /
+   prawdziwy dowód z terminala. Używany razem z lesson.css. Czysty HTML + CSS.
+
+   Użycie:
+   <ol class="chain">
+     <li class="link">
+       <p class="link__who">psql <span>Twój program</span></p>
+       <p class="link__what">Co robi to ogniwo.</p>
+       <p class="link__proof"><code>hosts: files dns</code></p>   <!-- opcjonalnie -->
+     </li>
+     <li class="link link--skip">…</li>   <!-- ogniwo, które dany program pomija -->
+   </ol>
+   ========================================================================== */
+
+.chain {
+  list-style: none;
+  margin: 0 0 1.6rem;
+  padding: 0;
+  font-family: var(--sans);
+}
+
+.link {
+  position: relative;
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--accent);
+  border-radius: 5px;
+  background: var(--surface);
+  padding: .65rem .9rem;
+  margin: 0 0 1.6rem;
+}
+.link:last-child { margin-bottom: 0; }
+
+/* strzałka do następnego ogniwa */
+.link:not(:last-child)::after {
+  content: "↓";
+  position: absolute;
+  left: 1.1rem;
+  bottom: -1.45rem;
+  color: var(--accent);
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.link__who {
+  margin: 0 0 .15rem;
+  font-weight: 700;
+  font-size: .95rem;
+}
+.link__who span {
+  font-weight: 400;
+  color: var(--ink-soft);
+  font-size: .82rem;
+  margin-left: .4rem;
+}
+.link__what {
+  margin: 0;
+  font-size: .86rem;
+  line-height: 1.5;
+}
+.link__proof {
+  margin: .35rem 0 0;
+  font-size: .78rem;
+  color: var(--ink-soft);
+}
+
+/* ogniwo pomijane (np. przez dig) — przekreślone obramowanie */
+.link--skip {
+  border-left-style: dashed;
+  border-left-color: var(--ink-soft);
+}
+.link--skip .link__who::after {
+  content: "dig pomija";
+  font-weight: 600;
+  font-size: .68rem;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--bad);
+  background: var(--bad-bg);
+  border-radius: 3px;
+  padding: .05rem .35rem;
+  margin-left: .5rem;
+  vertical-align: 1px;
+}
+.link--skip[data-skip]:not([data-skip=""]) .link__who::after { content: attr(data-skip); }
+
+@media print {
+  .chain, .link { break-inside: avoid; }
+}

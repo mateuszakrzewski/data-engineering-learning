@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Glosariusz Linuksa</title>
+<link rel="stylesheet" href="../../assets/lesson.css">
+</head>
+<body>
+<main class="page">
+<p class="eyebrow">Linux · Glosariusz</p>
+<h1>Glosariusz Linuksa</h1>
+<p class="subtitle">Archiwum do powtórek. Każde pojęcie jest najpierw wyjaśnione w lekcji, przy pierwszym użyciu.
+Pojęcia sieciowe (socket, port, DNS): <a href="../../network/reference/glossary.html">glosariusz sieci</a>.</p>
+
+<table>
+  <thead><tr><th>Termin</th><th>Znaczenie</th><th>Lekcja</th></tr></thead>
+  <tbody>
+    <tr><td>terminal</td><td>okno, w którym wpisujesz komendy</td><td>01</td></tr>
+    <tr><td>powłoka (<em>shell</em>), bash</td><td>program, który czyta komendę, uruchamia program i pokazuje wynik; bash = <em>Bourne Again SHell</em></td><td>01</td></tr>
+    <tr><td>znak zachęty (<em>prompt</em>)</td><td><code>użytkownik@maszyna:katalog$</code> — powłoka czeka na komendę</td><td>01</td></tr>
+    <tr><td>plik / katalog (<em>directory</em>)</td><td>nazwany kawałek danych / pojemnik na pliki i katalogi (folder)</td><td>01</td></tr>
+    <tr><td>korzeń (<em>root directory</em>)</td><td><code>/</code> — początek jedynego drzewa katalogów</td><td>01</td></tr>
+    <tr><td>ścieżka (<em>path</em>)</td><td>adres w drzewie; bezwzględna od <code>/</code>, względna od katalogu roboczego</td><td>01</td></tr>
+    <tr><td>katalog roboczy (<em>working directory</em>)</td><td>katalog, w którym „stoi" powłoka; pokazuje go <code>pwd</code></td><td>01</td></tr>
+    <tr><td>katalog domowy (<em>home</em>), <code>~</code></td><td>miejsce na pliki i ustawienia użytkownika, <code>/home/&lt;nazwa&gt;</code></td><td>01</td></tr>
+    <tr><td>plik ukryty (<em>dotfile</em>)</td><td>nazwa zaczyna się od kropki; <code>ls</code> pomija, <code>ls -a</code> pokazuje. Nie jest chroniony</td><td>01</td></tr>
+    <tr><td>FHS</td><td><em>Filesystem Hierarchy Standard</em> — standard układu katalogów w Linuksie</td><td>01</td></tr>
+    <tr><td>montowanie (<em>mount</em>)</td><td>podpięcie dysku lub zasobu pod katalog drzewa (np. <code>C:</code> → <code>/mnt/c</code>)</td><td>01</td></tr>
+    <tr><td>rotacja logów</td><td>bieżący log dostaje numer <code>.1</code>, starsze są kompresowane <code>.gz</code>, powstaje nowy plik</td><td>01</td></tr>
+    <tr><td>kod wyjścia, <code>$?</code></td><td>liczba, którą program oddaje powłoce; 0 = sukces, znaczenie innych liczb ustala program (<code>man</code>)</td><td>01 (i sieci 03)</td></tr>
+  </tbody>
+</table>
+</main>
+</body>
+</html>

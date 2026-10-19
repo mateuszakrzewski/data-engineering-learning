@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ścieżka Data Engineeringu</title>
+<link rel="stylesheet" href="assets/lesson.css">
+<link rel="stylesheet" href="assets/roadmap.css">
+</head>
+<body>
+<main class="page">
+
+  <p class="eyebrow">Mapa ścieżki &middot; stan na 2026-10-15</p>
+  <h1>Ścieżka Data Engineeringu</h1>
+  <p class="subtitle">Dwa tory naraz, codziennie po trochu. Każda domena dokłada kawałek do jednego, wspólnego obrazu i jednego projektu.</p>
+
+  <div class="goal">
+    <strong>Dokąd idziemy</strong>
+    Rozumieć to, czego używasz w pracy (Git, Snowflake, Airflow, Postgres, S3, BigQuery, Cloud Run, wkrótce Fivetran i dbt),
+    zamiast kopiować to jak zaklęcia. Mieć własny potok w portfolio. Opowiedzieć o nim po angielsku.
+    Pełna misja: <a href="MISSION.md">MISSION.md</a>.
+  </div>
+
+  <h2>Jak wygląda Twój dzień</h2>
+  <p>
+    Masz 45–90 minut. Każdy blok zaczyna się od <b>konsultacji</b> w katalogu głównym, która trwa ok. 5 minut.
+    Dostajesz wtedy 2–3 pytania z pamięci, zwykle z <i>innej</i> domeny niż dzisiejsza, i dowiadujesz się, którą lekcję otworzyć.
+    Przypominanie sobie czegoś po kilku dniach przerwy (<i>spacing</i>) to najskuteczniejszy znany sposób na pamięć długotrwałą
+    (<a href="https://www.learningscientists.org/blog/2016/7/21-1">The Learning Scientists</a>).
+  </p>
+  <table>
+    <thead><tr><th>Dzień</th><th>45 minut</th><th>Jeśli masz 90</th></tr></thead>
+    <tbody>
+      <tr><td>Pon</td><td>konsultacja + lekcja <b>toru A</b></td><td>+ ćwiczenia toru B</td></tr>
+      <tr><td>Wt</td><td>konsultacja + lekcja <b>toru B</b></td><td>+ krótka lekcja toru A</td></tr>
+      <tr><td>Śr</td><td>tor A</td><td>+ tor B</td></tr>
+      <tr><td>Czw</td><td>tor B</td><td>+ tor A</td></tr>
+      <tr><td>Pt</td><td><b>angielski</b> 25′ + przegląd tygodnia 15′</td><td>+ projekt</td></tr>
+      <tr><td>Weekend</td><td colspan="2">opcjonalnie: projekt albo zaległe ćwiczenia</td></tr>
+    </tbody>
+  </table>
+  <p class="note"><b>Tor A</b> to fundament IT: terminal, system, kontenery, sieć, infrastruktura.
+    <b>Tor B</b> to dane: SQL, bazy, modelowanie, transformacje.
+    Tory są celowo <i>różne</i>. Przeplatanie dwóch odległych tematów daje przerwę na utrwalenie i nie miesza podobnych pojęć.</p>
+
+  <h2>Mapa</h2>
+  <div class="legend">
+    <span class="l-active">aktywna</span><span class="l-paused">wstrzymana</span><span class="l-done">zamknięta</span><span>w kolejce</span>
+  </div>
+
+  <div class="phases">
+    <div class="phases__head"><div></div><div>Tor A — fundament IT</div><div>Tor B — dane</div></div>
+
+    <div class="phase">
+      <div class="phase__n">Faza 1</div>
+      <div class="track track--a">
+        <div class="dom dom--active"><span class="dom__badge">teraz</span>
+          <span class="dom__name">Linux <code>002_linux</code></span>
+          <span class="dom__why">Proces, plik, uprawnienia, stdout/stderr, <code>$?</code>, zmienne środowiskowe. Na tym stoją Docker i sieci, a w sieciach właśnie tego brakowało. <a href="002_linux/lessons/0001-gdzie-co-lezy.html">Lekcja 01: Gdzie co leży</a>.</span></div>
+      </div>
+      <div class="track track--b">
+        <div class="dom dom--active"><span class="dom__badge">teraz</span>
+          <span class="dom__name">SQL — podstawy <code>005_sql</code></span>
+          <span class="dom__why">Ziarno → GROUP BY → JOIN → NULL → CTE → funkcje okna, na danych TheLook w BigQuery. Nie wymaga instalacji. <a href="005_sql/lessons/0001-co-oznacza-jeden-wiersz.html">Lekcja 01: Co oznacza jeden wiersz</a>.</span></div>
+      </div>
+    </div>
+
+    <div class="phase">
+      <div class="phase__n">Faza 2</div>
+      <div class="track track--a">
+        <div class="dom dom--queued"><span class="dom__badge">~5 lekcji</span>
+          <span class="dom__name">Docker <code>003_docker</code></span>
+          <span class="dom__why">Obraz, kontener, wolumen, sieć, compose. Model „kontener = osobna maszyna” domyka problem z lekcji 04 z sieci.</span></div>
+      </div>
+      <div class="track track--b">
+        <div class="dom dom--queued"><span class="dom__badge">~5 lekcji</span>
+          <span class="dom__name">PostgreSQL <code>007_postgresql</code></span>
+          <span class="dom__why">Uruchomiony w Dockerze: transakcje, indeksy, <code>EXPLAIN</code>, role. Pierwszy most między torami.</span></div>
+      </div>
+    </div>
+
+    <div class="phase">
+      <div class="phase__n">Faza 3</div>
+      <div class="track track--a">
+        <div class="dom dom--paused"><span class="dom__badge">4 lekcje za Tobą</span>
+          <span class="dom__name">Sieci — powrót <code>network</code></span>
+          <span class="dom__why">Lekcja-most do 04, potem WSL ↔ Windows ↔ Docker, <code>localhost</code> i wystawianie bazy.</span></div>
+        <div class="dom dom--queued"><span class="dom__badge">~6</span>
+          <span class="dom__name">Python dla DE <code>006_python</code></span>
+          <span class="dom__why">Tylko to, czego używa DE: pliki, wyjątki, moduły, środowiska wirtualne, czytanie kodu od AI. Jest wcześnie, bo Twoje DAG-i w Airflow to Python.</span></div>
+      </div>
+      <div class="track track--b">
+        <div class="dom dom--queued"><span class="dom__badge">~4</span>
+          <span class="dom__name">Modelowanie danych <code>013_data_modeling</code></span>
+          <span class="dom__why">Na początek architektura: cykl życia danych, OLTP vs OLAP, hurtownia, data lake i lakehouse, ETL vs ELT. Potem Kimball: ziarno, fakty, wymiary, SCD. Bez tego dbt to tylko „SQL w plikach”.</span></div>
+        <div class="dom dom--queued"><span class="dom__badge">~4</span>
+          <span class="dom__name">Snowflake <code>014_snowflake</code></span>
+          <span class="dom__why">Warehouse, stage, <code>COPY INTO</code>, koszty, różnice względem BigQuery (Twoja migracja).</span></div>
+      </div>
+    </div>
+
+    <div class="phase">
+      <div class="phase__n">Faza 4</div>
+      <div class="track track--a">
+        <div class="dom dom--queued"><span class="dom__badge">~4</span>
+          <span class="dom__name">Git <code>012_git</code></span>
+          <span class="dom__why">Commit jako migawka, branch, merge vs rebase, konflikty, review na GitHubie, CI w GitHub Actions. Wersjonujesz już wtedy własny kod w Pythonie. Jeśli Git zacznie przeszkadzać w pracy, przesunę go wcześniej.</span></div>
+        <div class="dom dom--queued"><span class="dom__badge">~4</span>
+          <span class="dom__name">API <code>004_api</code></span>
+          <span class="dom__why">REST, uwierzytelnianie, paginacja, limity zapytań (rate limits), ponowienia. Korzysta z lekcji HTTP z sieci.</span></div>
+      </div>
+      <div class="track track--b">
+        <div class="dom dom--queued"><span class="dom__badge">~6</span>
+          <span class="dom__name">dbt <code>009_dbt</code></span>
+          <span class="dom__why">Modele, <code>ref</code>, testy, snapshoty, dokumentacja. Wchodzi do Was do zespołu, więc tu będzie realny zysk w pracy.</span></div>
+      </div>
+    </div>
+
+    <div class="phase">
+      <div class="phase__n">Faza 5</div>
+      <div class="track track--a">
+        <div class="dom dom--queued"><span class="dom__badge">~5</span>
+          <span class="dom__name">Airflow 3.2.2 <code>015_airflow</code></span>
+          <span class="dom__why">DAG, zależności, ponowienia, idempotencja, backfill, logi. Wykorzystuje kod wyjścia z sieci (LR-0010).</span></div>
+        <div class="dom dom--queued"><span class="dom__badge">~4</span>
+          <span class="dom__name">Chmura <code>016_cloud</code></span>
+          <span class="dom__why">S3, IAM, Cloud Run i BigQuery w zakresie potrzebnym w Twoich migracjach.</span></div>
+      </div>
+      <div class="track track--b">
+        <div class="dom dom--queued"><span class="dom__badge">~4</span>
+          <span class="dom__name">Replikacje i CDC <code>008_db_replications</code></span>
+          <span class="dom__why">WAL, replikacja logiczna, CDC, ELT. Co naprawdę robi Fivetran i co gwarantuje.</span></div>
+      </div>
+    </div>
+
+    <div class="phase">
+      <div class="phase__n">Faza 6</div>
+      <div class="track track--a">
+        <div class="dom dom--queued"><span class="dom__badge">~4</span>
+          <span class="dom__name">Infrastruktura jako kod <code>010_iac</code></span>
+          <span class="dom__why">Terraform: stan, plan, moduły. Projekt portfolio stawiany od zera jednym poleceniem.</span></div>
+      </div>
+      <div class="track track--b">
+        <div class="dom dom--queued"><span class="dom__badge">~4</span>
+          <span class="dom__name">Agenci AI <code>011_ai_agents</code></span>
+          <span class="dom__why">Na końcu, bo dopiero wtedy ocenisz, czy agent zrobił to dobrze.</span></div>
+        <div class="dom dom--queued"><span class="dom__badge">~4</span>
+          <span class="dom__name">Jakość danych i testy <code>017_data_quality</code></span>
+          <span class="dom__why">Testy, kontrakty danych, monitoring, alerty i lineage. Wymaga gotowych potoków z dbt i Airflow, dlatego dopiero tutaj.</span></div>
+      </div>
+    </div>
+
+    <div class="phase">
+      <div class="phase__n">Faza 7<br><small>opcja</small></div>
+      <div class="track track--a">
+        <div class="dom dom--queued"><span class="dom__badge">później</span>
+          <span class="dom__name">Kubernetes · systemy rozproszone</span>
+          <span class="dom__why">Nie ma ich w Twoim stacku, ale pojawiają się w ogłoszeniach. Decyzja, gdy zbliży się zmiana pracy.</span></div>
+      </div>
+      <div class="track track--b">
+        <div class="dom dom--queued"><span class="dom__badge">później</span>
+          <span class="dom__name">Spark · Kafka i streaming</span>
+          <span class="dom__why">Przetwarzanie dużych wolumenów i dane w czasie rzeczywistym. To samo kryterium co obok.</span></div>
+      </div>
+    </div>
+  </div>
+
+  <p class="note"><b>Cały czas w tle:</b> <code>english</code> w piątki
+    oraz <code>projekt</code>, czyli potok e-commerce i marketingu do portfolio (od fazy 1).
+    Liczby lekcji to szacunki. Domenę zamyka punkt kontrolny, a nie licznik.</p>
+  <p class="note"><b>Wątek przekrojowy, bezpieczeństwo:</b> szyfrowanie (TLS w sieciach), uprawnienia (IAM w chmurze, role w Snowflake'u),
+    maskowanie danych osobowych i RODO przy danych klientów w projekcie. Nie ma osobnej domeny, temat wraca tam, gdzie się pojawia.</p>
+  <p class="note"><b>Porównanie z <a href="https://roadmap.sh/data-engineer">roadmap.sh</a>:</b> sprawdziłem około 190 tematów tej mapy.
+    Wszystko, co dotyczy Twojego stacku i celu, ma tu swoje miejsce. Świadomie pominąłem bazy NoSQL, Hadoopa, ekosystemy Azure i AWS poza S3,
+    Javę, Scalę i narzędzia BI. Wrócimy do nich, jeśli będzie tego wymagać zmiana pracy.</p>
+
+  <h2>Kiedy przesiadasz się na inną domenę</h2>
+  <ol>
+    <li><b>Blok to 4–6 lekcji</b>, a kończy go <b>punkt kontrolny</b>: krótki, mieszany test bez podpowiedzi.
+      Wynik ≥ 80% oznacza przejście do następnej domeny w torze. Niższy wynik to jedna lekcja powtórkowa i drugie podejście.</li>
+    <li><b>Najpierw domykasz lekcję.</b> Nie zaczynasz kolejnej, dopóki poprzednia ma otwarte zadania z sekcji „Odpowiedz w czacie”.</li>
+    <li><b>Wstrzymana domena nie znika.</b> Jedno pytanie z niej wraca w rozgrzewce co 3–5 dni.</li>
+    <li><b>Problem z pracy wygrywa z planem.</b> Jeśli w pracy coś pilnego dotyczy Gita, Airflow albo Snowflake, przesuwam tę domenę wyżej.</li>
+  </ol>
+
+  <h2>Projekt: potok e-commerce i marketingu</h2>
+  <p>
+    Każda domena dokłada jeden kawałek do tego samego repozytorium. Źródłem danych jest
+    <b>TheLook eCommerce</b> (<code>bigquery-public-data.thelook_ecommerce</code>). To fikcyjny sklep z odzieżą przygotowany przez zespół Lookera,
+    z zamówieniami, klientami, produktami, zdarzeniami na stronie i kanałem pozyskania klienta (<code>traffic_source</code>).
+    Dane są syntetyczne i odświeżane na bieżąco, więc da się ćwiczyć prawdziwe ładowanie przyrostowe.
+    Są w BigQuery, a trafią do Snowflake'a, czyli projekt powtarza Twoją migrację z pracy.
+  </p>
+  <table>
+    <thead><tr><th>Domena</th><th>Kawałek projektu</th></tr></thead>
+    <tbody>
+      <tr><td>SQL</td><td>Pierwsze pytania biznesowe bezpośrednio w BigQuery: przychód według kanału, lejek konwersji ze zdarzeń, ostatnie zamówienie klienta.</td></tr>
+      <tr><td>Linux · Docker · Postgres</td><td>Postgres w compose jako „baza sklepu” (OLTP) z próbką TheLook. Skrypt ładujący dane, który poprawnie zgłasza błędy kodem wyjścia.</td></tr>
+      <tr><td>Modelowanie · Snowflake · dbt</td><td>Schemat gwiazdy: <code>fct_orders</code>, <code>fct_events</code>, <code>dim_customer</code> (z historią zmian, SCD2), <code>dim_product</code>, <code>dim_channel</code>, z testami w dbt. Marty: kohorty retencji, LTV, RFM.</td></tr>
+      <tr><td>Python · API · Airflow 3.2.2</td><td>Codzienny DAG: przyrostowe pobranie z BigQuery → Parquet w S3 → <code>COPY INTO</code> Snowflake → <code>dbt build</code>. Koszty kampanii z własnego mini-API, żeby policzyć CAC i ROAS.</td></tr>
+      <tr><td>Replikacje i CDC</td><td>Zmiany z Postgresa sklepu przenoszone do Snowflake'a przez CDC, czyli to, co robi Fivetran, tylko widziane od środka.</td></tr>
+      <tr><td>Git · IaC · Chmura</td><td>Repozytorium na GitHubie z CI. S3 i obiekty Snowflake'a w Terraformie.</td></tr>
+    </tbody>
+  </table>
+  <p class="note"><b>Logistyka zostaje:</b> TheLook ma centra dystrybucji oraz daty wysyłki, dostawy i zwrotu.
+    Pytanie „czy dłuższa dostawa zwiększa zwroty?” łączy Twoje 8 lat doświadczenia z marketingiem.</p>
+
+  <h2>Jak zacząć sesję</h2>
+  <p><b>1. Konsultacja.</b> W katalogu głównym, ok. 5 minut:</p>
+  <div class="cmd">cd ~/DataEngineering/courses/skills_learning &amp;&amp; claude
+/teach konsultacja</div>
+  <p><b>2. Lekcja.</b> Nowa sesja w katalogu domeny, który wskażę na konsultacji, np.:</p>
+  <div class="cmd">cd ~/DataEngineering/courses/skills_learning/002_linux &amp;&amp; claude
+/teach lesson 0001</div>
+  <p class="note">Sesja lekcji sama zapisze postęp: w swoim <code>NOTES.md</code> oraz jeden wiersz w <code>NOTES.md</code> głównym.
+    Dzięki temu na następnej konsultacji widzę, co zrobiłeś.</p>
+
+  <h2>Główne źródła</h2>
+  <div class="source">
+    <span class="label">Rama całej ścieżki</span>
+    Joe Reis &amp; Matt Housley, <a href="https://www.oreilly.com/library/view/fundamentals-of-data-engineering/9781098108298/"><i>Fundamentals of Data Engineering</i></a> (O'Reilly, 2022).
+    To książka praktyków o cyklu życia danych. Czytaj rozdział odpowiadający bieżącej domenie, nie od deski do deski.
+  </div>
+  <div class="source">
+    <span class="label">Faza 1 — Linux</span>
+    William Shotts, <a href="https://linuxcommand.org/tlcl.php"><i>The Linux Command Line</i></a> (darmowy PDF)
+    oraz MIT <a href="https://missing.csail.mit.edu/"><i>The Missing Semester</i></a> (edycja 2026), czyli dokładnie ten „kanon informatyczny”, którego Ci brakowało.
+  </div>
+  <div class="source">
+    <span class="label">Faza 1 — SQL</span>
+    <a href="https://www.postgresql.org/docs/current/tutorial.html">PostgreSQL Tutorial</a> (oficjalny)
+    oraz <a href="https://pgexercises.com/">pgexercises.com</a>, czyli ćwiczenia w przeglądarce, bez instalacji.
+  </div>
+  <p>Pełna lista: <a href="RESOURCES.md">RESOURCES.md</a>.</p>
+
+  <div class="ask">
+    <b>Pytaj.</b> Jeśli coś w planie wydaje Ci się nie tak, np. kolejność, tempo albo brakujący temat, powiedz to na konsultacji.
+    Plan jest po to, żeby go zmieniać, gdy rzeczywistość pokaże coś innego.
+  </div>
+
+  <nav class="nav">
+    <a href="MISSION.md">Misja</a>
+    <a href="NOTES.md">Stan domen</a>
+    <a href="network/lessons/0004-kto-odpowiada-na-nazwe.html">Ostatnia lekcja: sieci 04</a>
+  </nav>
+
+</main>
+</body>
+</html>

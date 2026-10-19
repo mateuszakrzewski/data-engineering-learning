@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Co oznacza jeden wiersz</title>
+<link rel="stylesheet" href="../../assets/lesson.css">
+<link rel="stylesheet" href="../../assets/quiz.css">
+</head>
+<body>
+<main class="page">
+
+<p class="eyebrow">SQL 01 · Pierwsze zapytania</p>
+<h1>Co oznacza jeden wiersz</h1>
+<p class="subtitle">Pięć słów SQL-a, dwie tabele sklepu TheLook i jedno pytanie, które zadajesz każdej tabeli, zanim zaufasz wynikowi.</p>
+
+<div class="goal">
+  <strong>Twoja wygrana po tej lekcji</strong>
+  Piszesz sam zapytanie do prawdziwego sklepu w BigQuery: wybierasz kolumny, filtrujesz zwroty, sortujesz od najnowszych.
+  I udowadniasz na danych, że <code>orders</code> i <code>order_items</code> to tabele o różnym <strong>ziarnie</strong> —
+  od tego zależy, czy SQL od AI liczy zamówienia, czy po cichu liczy coś innego.
+</div>
+
+<h2>Na czym ta lekcja się opiera</h2>
+<p>Zakładam tylko dwie rzeczy: umiesz zalogować się do konsoli Google Cloud (masz projekt <code>datapiperejtan</code>)
+i wiesz, że hurtownia danych to baza, w której firma trzyma dane do analiz. Resztę wyjaśniam po drodze.</p>
+<p><strong>Tabela</strong> to dane ułożone jak arkusz: ma nazwane <strong>kolumny</strong> (np. <code>status</code>) i dowolnie wiele
+<strong>wierszy</strong> — w każdym wierszu każda kolumna ma jedną wartość. <strong>SQL</strong> (<em>Structured Query Language</em>)
+to język, którym prosisz bazę o dane. Jedna taka prośba to <strong>zapytanie</strong> (<em>query</em>), a jego wynik to znowu tabela.</p>
+<p><strong>BigQuery</strong> to hurtownia danych Google. Używasz jej w pracy, a Google trzyma w niej publiczne zbiory danych —
+w tym <strong>TheLook</strong>: fikcyjny sklep odzieżowy z zamówieniami, klientami i wysyłkami, odświeżany na bieżąco.
+To dane do Twojego projektu portfolio, więc od dziś pracujesz na nich.</p>
+<p class="note"><b>Koszt:</b> BigQuery liczy opłatę od ilości danych, które zapytanie przeczyta. Pierwszy 1 TiB w miesiącu jest darmowy,
+także w trybie <em>sandbox</em> bez karty (<a href="https://docs.cloud.google.com/bigquery/docs/sandbox">BigQuery sandbox</a>).
+Wszystkie zapytania tej lekcji razem czytają kilkadziesiąt MB — to około jednej dziesięciotysięcznej darmowego limitu.</p>
+
+<div class="task">
+  <h3>Otwórz edytor zapytań</h3>
+  <p><strong>Co robisz:</strong> wejdź na <a href="https://console.cloud.google.com/bigquery">console.cloud.google.com/bigquery</a>,
+  upewnij się, że u góry wybrany jest projekt <code>datapiperejtan</code>, i otwórz nową kartę zapytania (przycisk <b>+</b> albo „SQL query").</p>
+  <p><strong>Na co patrzeć:</strong> pusty edytor tekstu i przycisk <b>Run</b> nad nim.</p>
+  <p><strong>Czego się spodziewać:</strong> to Twoje okno na całą lekcję. W pracy ten sam edytor masz w BigQuery, a w Snowflake rolę edytora pełni <em>worksheet</em>.</p>
+</div>
+
+<h2>1. Pełna nazwa tabeli</h2>
+<p>W BigQuery tabela ma adres z trzech członów oddzielonych kropkami: <strong>projekt.zbiór.tabela</strong>.
+Projekt to konto Google Cloud, do którego należą dane; <strong>zbiór</strong> (<em>dataset</em>) to pojemnik na tabele, jak katalog na pliki.</p>
+<pre><code>`bigquery-public-data.thelook_ecommerce.orders`
+ <span class="cmt">└─ projekt ─────────┘ └─ zbiór ─────────┘ └ tabela</span></code></pre>
+<p>Nazwę otaczają <strong>grawisy</strong> (<em>backticks</em>, znak <code>`</code> pod klawiszem Esc). Są potrzebne, bo nazwa projektu
+zawiera myślniki, a myślnik SQL czytałby jako minus. W Snowflake ten sam pomysł nazywa się <code>baza.schemat.tabela</code> — trzy człony, inne nazwy.</p>
+
+<h2>2. Pierwsze zapytanie: SELECT, FROM, LIMIT</h2>
+<p>Zapytanie czytające dane zaczyna się od <code>SELECT</code> (<em>wybierz</em>). Po nim wypisujesz kolumny, które chcesz dostać,
+oddzielone przecinkami. Potem <code>FROM</code> (<em>z</em>) i nazwa tabeli. Na końcu <code>LIMIT 10</code> — „oddaj najwyżej 10 wierszy",
+żeby nie zalać ekranu. Średnik <code>;</code> kończy zapytanie. Słowa SQL piszę wielkimi literami tylko dla czytelności;
+baza przyjmie też <code>select</code> (<a href="https://www.postgresql.org/docs/current/tutorial-select.html">PostgreSQL Tutorial 2.5</a>).</p>
+
+<div class="task">
+  <h3>Cztery kolumny z zamówień</h3>
+<pre><code>SELECT order_id, status, created_at, num_of_item
+FROM `bigquery-public-data.thelook_ecommerce.orders`
+LIMIT 10;</code></pre>
+  <p><strong>Co robi:</strong> wybiera cztery kolumny z tabeli <code>orders</code>: <code>order_id</code> (identyfikator zamówienia — <em>id</em> = <em>identifier</em>),
+  <code>status</code> (stan zamówienia), <code>created_at</code> (kiedy złożone — „utworzone o") i <code>num_of_item</code> (<em>number of items</em>: ile pozycji ma zamówienie).</p>
+  <p><strong>Na co patrzeć — zanim klikniesz Run:</strong> w prawym górnym rogu edytora pojawia się zielony znaczek i zdanie
+  <em>„This query will process … when run"</em>. To <strong>szacunek</strong> BigQuery: ile danych przeczyta to zapytanie
+  (<a href="https://docs.cloud.google.com/bigquery/docs/best-practices-costs">BigQuery: query validator</a>). Zapisz tę liczbę.</p>
+  <p><strong>Czego się spodziewać:</strong> szacunek około <b>4 MB</b>. Po <b>Run</b> (albo <code>Ctrl+Enter</code>) — tabela wyników, 10 wierszy, na przykład:</p>
+<pre><code>order_id  status      created_at               num_of_item
+6         Cancelled   2026-08-28 00:24:20  1
+19        Cancelled   2026-10-03 08:33:07  1
+60        Cancelled   2026-03-30 11:29:27  1
+…</code></pre>
+  <p class="note">Twoje wiersze będą inne: bez sortowania baza oddaje wiersze w dowolnej kolejności, a dane TheLook i tak się zmieniają.
+  Konsola może dopisać do czasu <code>UTC</code> — to strefa czasowa, w której zapisano czas. Część zamówień (te od 10.10.2026) ma też ułamek sekundy,
+  np. <code>05:45:05.200267</code>: <code>TIMESTAMP</code> przechowuje czas z dokładnością do mikrosekundy (6 cyfr), a starsze wiersze mają tam po prostu zera.</p>
+</div>
+
+<div class="task">
+  <h3>Te same 10 wierszy, ale wszystkie kolumny</h3>
+<pre><code>SELECT *
+FROM `bigquery-public-data.thelook_ecommerce.orders`
+LIMIT 10;</code></pre>
+  <p><strong>Co robi:</strong> gwiazdka <code>*</code> w miejscu listy kolumn znaczy „wszystkie kolumny".</p>
+  <p><strong>Na co patrzeć:</strong> tylko na szacunek w prawym górnym rogu. <b>Nie musisz uruchamiać.</b></p>
+  <p><strong>Czego się spodziewać:</strong> około <b>6,4 MB</b> — więcej niż przed chwilą, choć wierszy nadal ma być 10.
+  Uruchom i obserwuj, a potem przeczytaj wyjaśnienie poniżej.</p>
+</div>
+<p>Dlaczego? BigQuery przechowuje dane <strong>kolumnami</strong>: każda kolumna leży osobno. Czyta więc tylko kolumny wymienione w zapytaniu —
+ale każdą <em>w całości</em>, więc <code>LIMIT</code> na takiej tabeli nie zmniejsza rachunku. Dokumentacja Google mówi wprost: „<em>Avoid SELECT *.
+Query only the columns that you need</em>", a <code>LIMIT</code> w tabelach bez klastrowania „<em>won't reduce compute costs</em>"
+(<a href="https://docs.cloud.google.com/bigquery/docs/best-practices-performance-compute">BigQuery: Avoid SELECT *</a>).
+Snowflake też trzyma dane kolumnami, więc ten sam nawyk przyda Ci się w pracy.</p>
+<p><b>Jak BigQuery liczy te bajty.</b> Nie od rozmiaru na dysku po kompresji, tylko od <strong>bajtów logicznych</strong>:
+„<em>BigQuery always uses logical (uncompressed) bytes to calculate on-demand query costs</em>"
+(<a href="https://docs.cloud.google.com/bigquery/docs/estimate-costs">BigQuery: Estimate and control costs</a>).
+Każdy typ ma stały rozmiar: <code>INTEGER</code> (<code>INT64</code>) i <code>TIMESTAMP</code> po 8 bajtów, <code>STRING</code> 2 bajty plus długość tekstu.
+Dla czterech kolumn z pierwszego zapytania: <code>8 + 8 + 8 + (2 + długość status)</code> w każdym wierszu, razem 4&nbsp;283&nbsp;369 B —
+dokładnie tyle, ile pokazał szacunek (sprawdzone 17.10.2026). Kolumny tekstowe są więc najdroższe, a liczby i daty — tanie i przewidywalne.</p>
+
+<h2>3. WHERE i ORDER BY: tylko zwroty, najnowsze na górze</h2>
+<p><code>WHERE</code> (<em>gdzie</em>) to filtr: zostają tylko wiersze, dla których warunek jest prawdziwy
+(<a href="https://www.postgresql.org/docs/current/tutorial-select.html">PostgreSQL Tutorial 2.5</a>).
+Warunek <code>status = 'Returned'</code> znaczy „kolumna <code>status</code> równa się tekstowi <em>Returned</em>".
+<strong>Apostrofy</strong> <code>'…'</code> oznaczają wartość tekstową. Słowo bez apostrofów SQL traktuje jak nazwę kolumny.</p>
+<p><code>ORDER BY</code> (<em>uporządkuj według</em>) sortuje wynik. Domyślnie rosnąco; <code>DESC</code> (<em>descending</em>) odwraca kolejność —
+przy datach znaczy to „najnowsze na górze". Kolejność słów w zapytaniu jest stała:
+<code>SELECT … FROM … WHERE … ORDER BY … LIMIT</code>.</p>
+
+<div class="task">
+  <h3>Pięć najnowszych zwrotów</h3>
+<pre><code>SELECT order_id, status, created_at, num_of_item
+FROM `bigquery-public-data.thelook_ecommerce.orders`
+WHERE status = 'Returned'
+ORDER BY created_at DESC
+LIMIT 5;</code></pre>
+  <p><strong>Co robi:</strong> zostawia tylko zamówienia ze statusem <em>Returned</em>, układa je od najnowszego i oddaje pięć pierwszych.</p>
+  <p><strong>Na co patrzeć:</strong> kolumnę <code>status</code> (wszędzie <em>Returned</em>), malejące daty w <code>created_at</code>
+  i <code>num_of_item</code> — <b>znajdź wiersz, w którym jest 2 albo więcej</b> i zapisz jego <code>order_id</code>. Przyda się w części 4.</p>
+  <p><strong>Czego się spodziewać</strong> (tak wyglądało to 15.10.2026):</p>
+<pre><code>order_id  status    created_at               num_of_item
+78608     Returned  2026-10-15 00:33:12  1
+78293     Returned  2026-10-15 00:28:57  1
+76807     Returned  2026-10-15 00:21:42  <span class="hl">2</span>
+8411      Returned  2026-10-15 00:01:50  1
+195       Returned  2026-10-15 00:00:59  2</code></pre>
+  <p class="note">Jeśli w Twoich pięciu wierszach wszędzie jest 1, zmień <code>LIMIT 5</code> na <code>LIMIT 20</code>.</p>
+</div>
+
+<div class="task">
+  <h3>Mała litera</h3>
+  <p>Zmień w poprzednim zapytaniu jedną literę: <code>WHERE status = 'returned'</code>. Uruchom i obserwuj.</p>
+  <p><strong>Na co patrzeć:</strong> czy jest komunikat o błędzie i ile jest wierszy.</p>
+  <p><strong>Czego się spodziewać:</strong> <b>żadnego błędu</b> i komunikat w stylu <em>„There is no data to display"</em> — zero wierszy.
+  Porównanie tekstu w BigQuery rozróżnia wielkość liter, jak Linux przy <code>/etc</code> i <code>/Etc</code>. Tyle że <code>ls /Etc</code>
+  przynajmniej zgłosił problem — tu zapytanie po prostu się udało i nic nie znalazło.</p>
+</div>
+
+<div class="task">
+  <h3>Bez apostrofów</h3>
+  <p>A teraz usuń apostrofy: <code>WHERE status = Returned</code>. Uruchom i obserwuj.</p>
+  <p><strong>Czego się spodziewać:</strong> tym razem błąd, jeszcze przed uruchomieniem (czerwony znaczek zamiast zielonego):</p>
+<pre><code>Unrecognized name: Returned at [3:16]</code></pre>
+  <p>Czytamy: „nie znam nazwy <em>Returned</em>" — bez apostrofów BigQuery szukał <strong>kolumny</strong> o tej nazwie.
+  <code>[3:16]</code> to miejsce w tekście: linia 3, znak 16. Przywróć apostrofy i wielką literę.</p>
+</div>
+
+<h2>4. Ziarno: co oznacza jeden wiersz?</h2>
+<p><strong>Ziarno</strong> (<em>grain</em>) tabeli to odpowiedź na pytanie „co dokładnie opisuje jeden wiersz?". Ralph Kimball, autor kanonu
+modelowania hurtowni, stawia je jako pierwszą decyzję przy projektowaniu tabeli: „<em>The grain establishes exactly what a single fact table
+row represents</em>" (<a href="https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/grain/">Kimball Group — Grain</a>).
+Dziś sprawdzasz je na danych, bez teorii.</p>
+<p>W <code>orders</code> każdy wiersz ma inny <code>order_id</code>, a kolumna <code>num_of_item</code> mówi, ile pozycji ma zamówienie.
+Obok leży tabela <code>order_items</code> (<em>pozycje zamówień</em>): jej kolumny to m.in. <code>id</code> (identyfikator wiersza),
+<code>order_id</code> (do którego zamówienia należy), <code>product_id</code> (jaki produkt) i <code>sale_price</code> (cena sprzedaży).</p>
+
+<div class="task">
+  <h3>Jedno zamówienie w drugiej tabeli</h3>
+<pre><code>SELECT id, order_id, product_id, status, sale_price
+FROM `bigquery-public-data.thelook_ecommerce.order_items`
+WHERE order_id = 76807;</code></pre>
+  <p><strong>Co robi:</strong> szuka w <code>order_items</code> wszystkich wierszy należących do jednego zamówienia.
+  <b>Wstaw swój <code>order_id</code></b> z zadania „Pięć najnowszych zwrotów". Liczba nie ma apostrofów, bo to nie tekst.</p>
+  <p><strong>Na co patrzeć:</strong> ile wierszy wróciło i czy to ta sama liczba, co <code>num_of_item</code> tego zamówienia w <code>orders</code>.
+  Popatrz też na <code>id</code> i <code>product_id</code>.</p>
+  <p><strong>Czego się spodziewać</strong> (dla 76807 z przykładu):</p>
+<pre><code>id      order_id  product_id  status    sale_price
+111260  76807     27387       Returned  24.989999771118164
+111261  76807     19299       Returned  160.0</code></pre>
+  <p>Dwa wiersze, bo zamówienie ma dwie pozycje. Ten sam <code>order_id</code> występuje tu dwa razy, a <code>id</code> jest za każdym razem inny.
+  Wniosek: w <code>orders</code> jeden wiersz = <strong>jedno zamówienie</strong>; w <code>order_items</code> jeden wiersz = <strong>jedna pozycja zamówienia</strong>.
+  Sprawdziłem to dla całej tabeli: we wszystkich 125&nbsp;004 zamówieniach <code>num_of_item</code> zgadza się z liczbą wierszy w <code>order_items</code>.</p>
+  <p class="note">Dziwna cena <code>24.989999771118164</code> to skutek typu kolumny (<code>FLOAT</code>, liczba przybliżona). O typach i pieniądzach — w osobnej lekcji.</p>
+</div>
+
+<p><b>Dlaczego to jest pytanie numer jeden przy SQL od AI.</b> Jeśli policzysz wiersze w <code>orders</code>, liczysz zamówienia.
+Jeśli w <code>order_items</code> — liczysz pozycje. Oba zapytania wyglądają podobnie i oba „działają". Gdy za kilka lekcji połączysz te tabele
+(<code>JOIN</code>), każde zamówienie pojawi się w wyniku tyle razy, ile ma pozycji — i jeśli nie znasz ziarna, nie zauważysz, że liczby urosły.</p>
+
+<h2>Trening</h2>
+<p>Kliknij odpowiedź, przeczytaj wyjaśnienie. Na końcu skopiuj wynik dla mnie.</p>
+
+<div class="quiz">
+  <p class="quiz__q"><span class="tag">01.4·1</span> Który warunek zwróci zamówienia zwrócone w TheLook?</p>
+  <div class="quiz__opts">
+    <button class="quiz__opt" data-why="Mała litera to inny tekst — zapytanie się uda, ale zwróci zero wierszy.">WHERE status = 'returned'</button>
+    <button class="quiz__opt" data-correct data-why="Apostrofy = wartość tekstowa, a wielkość liter zgadza się z danymi.">WHERE status = 'Returned'</button>
+    <button class="quiz__opt" data-why="Bez apostrofów Returned to nazwa kolumny, której nie ma — błąd Unrecognized name.">WHERE status = Returned</button>
+  </div>
+</div>
+<div class="quiz">
+  <p class="quiz__q"><span class="tag">01.4·2</span> W <code>orders</code> zamówienie ma <code>num_of_item = 3</code>. Ile wierszy z tym <code>order_id</code> jest w <code>order_items</code>?</p>
+  <div class="quiz__opts">
+    <button class="quiz__opt" data-correct data-why="Jeden wiersz order_items = jedna pozycja, więc trzy pozycje = trzy wiersze.">trzy wiersze</button>
+    <button class="quiz__opt" data-why="Jeden wiersz na zamówienie to ziarno tabeli orders, nie order_items.">jeden wiersz</button>
+    <button class="quiz__opt" data-why="Każde zamówienie ma swoje pozycje w order_items — sprawdziłeś to na danych.">zero wierszy</button>
+  </div>
+</div>
+<div class="quiz">
+  <p class="quiz__q"><span class="tag">01.4·3</span> Chcesz, żeby zapytanie do <code>orders</code> w BigQuery przeczytało mniej danych. Co pomoże?</p>
+  <div class="quiz__opts">
+    <button class="quiz__opt" data-why="Sortowanie nie zmienia tego, które kolumny trzeba przeczytać.">dopisanie ORDER BY created_at</button>
+    <button class="quiz__opt" data-why="BigQuery i tak czyta wybrane kolumny w całości — LIMIT tu nie obniża kosztu.">dopisanie LIMIT 10 na końcu</button>
+    <button class="quiz__opt" data-correct data-why="Dane leżą kolumnami: czytane są tylko kolumny z listy SELECT.">wybranie mniejszej liczby kolumn</button>
+  </div>
+</div>
+<div class="quiz">
+  <p class="quiz__q"><span class="tag">01.4·4</span> Co oznacza jeden wiersz tabeli <code>order_items</code>?</p>
+  <div class="quiz__opts">
+    <button class="quiz__opt" data-why="Całe zamówienie to jeden wiersz w orders; w order_items zamówienie może mieć kilka wierszy.">jedno całe zamówienie</button>
+    <button class="quiz__opt" data-correct data-why="To samo order_id powtarza się tyle razy, ile pozycji ma zamówienie.">jedną pozycję zamówienia</button>
+    <button class="quiz__opt" data-why="Klient ma user_id i może mieć wiele zamówień — to nie jest ziarno tej tabeli.">jednego klienta sklepu</button>
+  </div>
+</div>
+<div class="quiz">
+  <p class="quiz__q"><span class="tag">01.4·5</span> Co zwróci <code>ORDER BY created_at DESC LIMIT 5</code>?</p>
+  <div class="quiz__opts">
+    <button class="quiz__opt" data-correct data-why="DESC = malejąco, więc najnowsze daty są na górze, a LIMIT bierze pięć pierwszych.">pięć najnowszych zamówień</button>
+    <button class="quiz__opt" data-why="Najstarsze byłyby przy sortowaniu rosnącym, bez DESC.">pięć najstarszych zamówień</button>
+    <button class="quiz__opt" data-why="Losowa kolejność jest bez ORDER BY; tu sortowanie jest jawne.">pięć losowych zamówień</button>
+  </div>
+</div>
+<p class="score"></p>
+
+<h2>Z pamięci: kod wyjścia (sieci 03)</h2>
+<div class="recall" data-hint="Najpierw napisz odpowiedź w czacie (01.5), dopiero potem kliknij. Podpowiedź: kod wyjścia mówi, czy program zrobił swoje — nie, czy wynik Ci się podoba.">
+  <p class="recall__q"><span class="tag">01.5</span> Zadanie w Airflow uruchamia zapytanie z literówką <code>status = 'returned'</code>. Zapytanie zwraca zero wierszy.
+  Czy zadanie zostanie oznaczone jako nieudane? Dlaczego?</p>
+  <div class="recall__a">Nie. Zapytanie wykonało się poprawnie — zero wierszy to też prawidłowa odpowiedź bazy. Sprawdziłem to narzędziem <code>bq</code>
+  na Twoim projekcie: ta literówka daje pusty wynik i kod wyjścia <code>0</code>. Airflow widzi sukces, a raport jest pusty.
+  To dlatego potoki potrzebują osobnych testów danych („czy przyszły jakiekolwiek wiersze?") — wrócimy do tego w <code>017_data_quality</code>.
+  Porównaj z <code>getent</code>, który przy pustym wyniku oddawał <code>2</code>: znaczenie kodu ustala program, nie Ty.</div>
+</div>
+
+<section class="respond">
+  <h2>Odpowiedz w czacie</h2>
+  <ol class="respond__list">
+    <li><span class="respond__id">01.1</span> <b>Misja</b> — przeczytaj <code>005_sql/MISSION.md</code> (5 punktów „Success looks like"). Pasuje? Coś dodać albo wyrzucić? Jedno zdanie wystarczy.</li>
+    <li><span class="respond__id">01.2</span> <b>Koszt</b> — analityk prosi o „wszystkie zamówienia z ostatniego miesiąca, wszystkie kolumny, do Excela". Która kolumna <code>orders</code> jest
+      najdroższa w odczycie i dlaczego? Co zaproponujesz mu zamiast <code>SELECT *</code>? Sprawdź swoją odpowiedź szacunkiem w konsoli.</li>
+    <li><span class="respond__id">01.3</span> <b>Ziarno na Twoich danych</b> — podaj swój <code>order_id</code>, jego <code>num_of_item</code> z <code>orders</code>
+      i liczbę wierszy, które dostałeś z <code>order_items</code>. Potem jednym zdaniem: co oznacza jeden wiersz w każdej z tych tabel?</li>
+    <li><span class="respond__id">01.4</span> <b>Trening</b> — kliknij „Skopiuj dla nauczyciela" pod quizem i wklej.</li>
+    <li><span class="respond__id">01.5</span> <b>Z pamięci</b> — odpowiedz na pytanie o Airflow i zero wierszy, zanim klikniesz „Pokaż odpowiedź".</li>
+    <li><span class="respond__id">01.6</span> <b>Z Twojej pracy</b> — wymień jedną tabelę w Snowflake albo BigQuery, którą często czytasz, i powiedz, co oznacza w niej jeden wiersz.
+      „Nie wiem na pewno" to też dobra odpowiedź — napisz wtedy, jak byś to sprawdził.</li>
+  </ol>
+</section>
+
+<div class="source">
+  <span class="label">Główne źródło (po angielsku)</span>
+  <a href="https://www.postgresql.org/docs/current/tutorial-select.html">PostgreSQL Tutorial — 2.5 Querying a Table</a>:
+  oficjalna dokumentacja Postgresa, ten sam <code>SELECT</code> / <code>WHERE</code> / <code>ORDER BY</code> na małej tabeli pogodowej. Krótkie, około 10 minut czytania.
+  Do kosztów BigQuery: <a href="https://docs.cloud.google.com/bigquery/docs/best-practices-performance-compute">Optimize query computation — Avoid SELECT *</a>.
+</div>
+
+<div class="source">
+  <span class="label">Ściąga do tej lekcji</span>
+  <a href="../reference/sciaga-select.html">Ściąga: SELECT i ziarno</a> — kolejność słów, nazwy tabel, mapa TheLook na jednej stronie.
+  Pojęcia: <a href="../reference/glossary.html">glosariusz SQL</a>.
+</div>
+
+<div class="ask">
+  <strong>Coś niejasne?</strong> Zapytaj mnie w czacie — o konsolę BigQuery, o dowolną kolumnę TheLook albo o tabelę z Twojej pracy, której ziarna nie jesteś pewien.
+</div>
+
+<nav class="nav">
+  <a href="../../roadmap.html">Mapa ścieżki</a>
+  <a href="../reference/sciaga-select.html">Ściąga: SELECT i ziarno</a>
+  <a href="../reference/glossary.html">Glosariusz</a>
+</nav>
+
+</main>
+<script src="../../assets/quiz.js"></script>
+</body>
+</html>
