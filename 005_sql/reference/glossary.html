@@ -23,6 +23,11 @@ Pojęcia terminala: <a href="../../002_linux/reference/glossary.html">glosariusz
     <tr><td>ziarno (<em>grain</em>)</td><td>to, co dokładnie opisuje jeden wiersz tabeli</td><td>01</td></tr>
     <tr><td>przechowywanie kolumnowe</td><td>każda kolumna leży osobno; czytane są tylko kolumny z zapytania, w całości</td><td>01</td></tr>
     <tr><td>szacunek (<em>query validator</em>, <em>dry run</em>)</td><td>BigQuery przed uruchomieniem podaje, ile danych przeczyta zapytanie (od tego zależy koszt)</td><td>01</td></tr>
+    <tr><td>funkcja agregująca (<em>aggregate function</em>)</td><td>bierze wartości z wielu wierszy, oddaje jedną: <code>COUNT</code>, <code>SUM</code>, <code>AVG</code></td><td>02</td></tr>
+    <tr><td>alias (<code>AS</code>)</td><td>nazwa nadana kolumnie wyniku; <code>ORDER BY</code> może jej użyć</td><td>02</td></tr>
+    <tr><td>grupa, <code>GROUP BY</code></td><td>wiersze o tej samej wartości kolumn grupujących; <b>ziarno wyniku = kolumny z GROUP BY</b></td><td>02</td></tr>
+    <tr><td><code>HAVING</code></td><td>filtr gotowych grup (po agregacji); <code>WHERE</code> filtruje wiersze przed grupowaniem</td><td>02</td></tr>
+    <tr><td>AOV (<em>average order value</em>)</td><td>średnia wartość zamówienia = przychód / liczba różnych zamówień</td><td>02</td></tr>
   </tbody>
 </table>
 </main>

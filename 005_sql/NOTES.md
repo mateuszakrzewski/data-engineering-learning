@@ -22,7 +22,7 @@ Wspólne komponenty: `../assets/` (lesson.css, quiz.css, quiz.js) — lekcje lin
 
 ## Plan domeny (wstępny, 5–6 lekcji + punkt kontrolny)
 1. 0001 Co oznacza jeden wiersz — SELECT/FROM/WHERE/ORDER BY/LIMIT, ziarno `orders` vs `order_items`, koszt kolumnowy ✅ wydana
-2. Agregacje — `COUNT(*)`, `SUM`, `GROUP BY`, `HAVING`: przychód i zwroty wg statusu; ziarno wyniku `GROUP BY`
+2. 0002 Wiele wierszy, jedna liczba — `COUNT(*)`/`COUNT(DISTINCT)`/`SUM`/`AVG`, AOV, `GROUP BY` (ziarno wyniku), `HAVING`, `IN` ✅ wydana 2026-10-20
 3. JOIN — `orders` ⋈ `order_items` ⋈ `users`; mnożenie wierszy (kluczowe dla misji: weryfikacja SQL od AI)
 4. NULL — trójwartościowa logika, `COUNT(*)` vs `COUNT(col)`, `COALESCE` (`shipped_at`/`delivered_at`/`returned_at` — fulfillment)
 5. CTE — rozbijanie zapytania na kroki; lejek z `events` lub czas dostawy vs zwroty
@@ -37,12 +37,17 @@ Wspólne komponenty: `../assets/` (lesson.css, quiz.css, quiz.js) — lekcje lin
 - Format czasu w konsoli BQ (czy dopisuje `UTC`/ułamki) — niezweryfikowany; w lekcji podany ostrożnie. Sprawdzić w odpowiedzi 01.2/01.3.
 - (2026-10-19, konsultacja) Rozgrzewka R2 ✓: sam rozróżnił „średnia cena pozycji” vs AOV i kierunek (niżej). Przyczynę opisał przez „pozycja występuje wielokrotnie”;
   precyzyjnie: mianownik (wiersze `order_items` ≥ zamówienia), w TheLook brak `quantity`. → 0002 może startować od tej pary (AVG na pozycjach vs SUM/COUNT DISTINCT zamówień) jako decyzji, bez podawania wzoru w zadaniu przed lekcją.
+- (2026-10-20) **Na LEGION nie ma `bq` ani `gcloud`** (brak w PATH, brak `~/.config/gcloud`) — wbrew wpisowi w Środowisku. Lekcja 0002 napisana bez weryfikacji liczb:
+  przykładowe wyniki tylko jako kształt (nagłówki + „…"), uczeń odkrywa liczby. **Niezweryfikowane:** dokładne brzmienie błędu `neither grouped nor aggregated` (z pamięci),
+  czy `COUNT(*)` w BQ daje szacunek 0 B, czy `order_items.user_id` istnieje (zadanie 02.3 na tym stoi), czy statusy pozycji w zamówieniu bywają mieszane (02.2).
+  → Sprawdzić z odpowiedzi ucznia; zaproponować instalację Google Cloud CLI (`gcloud auth login` sam przez `! …`).
 - Do sprawdzenia w odpowiedziach: 01.6 — czy umie nazwać ziarno tabeli z pracy (punkt startowy na lekcję o JOIN).
 
 ## Postępy
 | Lekcja | Data | Quiz / trening | Opanowane | Otwarte |
 |---|---|---|---|---|
 | 0001 co oznacza jeden wiersz | 2026-10-15 → 10-17 | 01.4: 5/5 · 01.5 ✓ · 01.3 ✓ (4 id, zweryfikowane) · 01.6 ✓✓ · 01.2 — sprzeciw, słuszny co do formy | wartość `'…'` vs nazwa; 0 wierszy = sukces (01.5 ✓); ziarno orders/order_items (quiz); koszt kolumnowy (quiz) | `'…'` vs `"…"` w dialektach; koszt = bajty logiczne wg typu (wyjaśnione, nieprzećwiczone); NULL w kluczu biznesowym (dopytanie do 01.6); MISSION.md — sprzeczność „procedury” vs Out of scope |
+| 0002 wiele wierszy, jedna liczba | 2026-10-20 → 10-21 | 02.4: 3/4 (✗ koszt kolumnowy) · 02.5 ✓ · 02.3 ½ · 02.1 ½ (zadanie bez kontekstu — mój błąd) · 02.2 ✗ sprzeczność | ziarno wyniku `GROUP BY` (quiz ✓); `WHERE` vs `HAVING` (quiz ✓); `"…"` = identyfikator w Snowflake (02.5 ✓); błąd ziarna w SQL od AI (02.3 sedno) | koszt `COUNT(*)` = brak kolumn (02.4·3 ✗ → retrieval w 0003); addytywność `COUNT(DISTINCT)` (02.2 — dopytanie o liczby); 02.3 kierunek + poprawka + liczba wierszy |
 
 ## Dziennik lekcji
 <!-- Format: ### lesson NNNN → odpowiedzi (cytaty dosłowne, po numerach) → ocena → co z tego wynika. -->
@@ -142,4 +147,39 @@ Ocena i działania:
 - Dopytanie 01.6 ✓: brak numeru linii; NULL i komentarz = dwie różne pozycje (paragon łączy zamówienia). Logika biznesowa poprawna.
   Konsekwencja techniczna (sprawdzona `bq`): `GROUP BY` wrzuca dwa NULL-e do jednej grupy (test unikalności ich nie rozróżni), a `JOIN … ON a.komentarz = b.komentarz` na dwóch NULL-ach daje 0 dopasowań.
   Jego klucz działa do grupowania, ale psuje JOIN/MERGE po kluczu → gotowy przykład otwierający lekcję o NULL.
+
+### lesson 0002
+(2026-10-20) Lekcja wydana: `lessons/0002-wiele-wierszy-jedna-liczba.html`. Ściąga `reference/sciaga-agregacje.html`, glosariusz +5 pojęć.
+Wejście: jego R2 z 10-19 (AVG pozycji ≠ AOV). Reguła AOV i reguła „ziarno wyniku = GROUP BY" uczone przed zadaniami (zasada 12).
+Zadania-decyzje: 02.1 które statusy do AOV (Cancelled/Returned/Processing), 02.2 czy `COUNT(DISTINCT order_id)` po statusach sumuje się do całości,
+02.3 recenzja AI: `COUNT(*)` z `order_items` jako „zwrócone zamówienia" (zawyża → więcej klientów). Retrieval: quiz 02.4·3 (koszt kolumnowy), 02.4·4 (ziarno), 02.5 `"…"` w Snowflake (z podpowiedzią).
+Czekam na odpowiedzi 02.1–02.5.
+
+(2026-10-21) Odpowiedzi:
+> SQL 02 · Wiele wierszy, jedna liczba — quiz: 3/4
+> 02.4·1  [jednego klienta sklepu ✓]  02.4·2  [w klauzuli HAVING po GROUP BY ✓]
+> 02.4·3  [SELECT SUM(sale_price) FROM order_items ✗ (poprawnie: SELECT COUNT(*) FROM order_items)]  02.4·4  [liczbę pozycji zamówień ✓]
+> 02.5 będzie szukał takiego obiektu zamiast stringa o takiej wartości. Naprawię to zamieniając na pojedynczy cudzysłów
+> 02.1 Twoje pytanie jest bez sensu, bo zależy czego ma dotyczyć kampania. Myślę, że najmniej im powie przychód z zamówień w toku, ale reszta ma znaczenie w zależności od kampanii
+> 02.2 Tak, grupy się sumują. Tak, pozycje jednego zamówienia mogą mieć różne statusy. Co rozumiesz przez: 'Jak napiszesz, że ktoś sumuję taką kolumnę w raporcie?' Pytanie z dupy i nie wiadomo czego dotyczy
+> 02.3 Zapytanie jest ustawione nie na tą tabelę, co trzeba, zwróci mi ilość zwróconych pozycji a nie zamowien (klientów)
+
+Ocena:
+- 02.4: 3/4. ✓ ziarno wyniku `GROUP BY`, `HAVING`, ziarno `order_items` — bez podpowiedzi. ✗ 02.4·3: wybrał `SUM(sale_price)` zamiast `COUNT(*)` —
+  reguła „koszt = przeczytane kolumny" (SQL 01) nie przeniosła się na zapytanie bez kolumn. Retrieval w 0003 (inna forma: porównanie szacunków dwóch zapytań).
+- 02.5 ✓ — `"…"` = obiekt/identyfikator, poprawka na apostrof. Utrwalone (drugi raz poprawnie, teraz bez sprostowania).
+- 02.1 ½ — **krytyka słuszna**: zadanie nie mówiło, co kampania mierzy, a decyzja o statusach zależy od definicji (AOV brutto vs netto). Jego „zależy" to właściwy odruch.
+  Processing jako najmniej przydatny — trafne. Brak liczby (nie policzył). Zadanie w lekcji przepisane na konkretny brief (netto vs brutto).
+- 02.2 ✗ — odpowiedź wewnętrznie sprzeczna: jeśli sumy są równe, każde zamówienie jest w dokładnie jednej grupie → w tych danych pozycje jednego zamówienia mają ten sam status.
+  Możliwa dobra intuicja pod spodem: schemat na to pozwala, dane dziś nie. Ostatnie pytanie zadania było niejasne — **słusznie odrzucone**, przeformułowane w lekcji. Dopytałem o dwie liczby.
+- 02.3 ½ — sedno ✓ (liczy pozycje, nie zamówienia). Brak: kierunek (zawyża: 1 zwrot z 2 pozycjami przechodzi próg) i poprawka (`COUNT(DISTINCT order_id)` albo `FROM orders`); nie uruchomił. Dopytałem.
+- Wzorzec u mnie (01.2, 02.1, 02.2): zadanie-decyzja bez podanego kontekstu albo z niejasną prośbą → LR-0004.
+
+(2026-10-21, późno) Decyzja ucznia:
+> przenieś to na kolejną lekcję. Dzisiaj jest już późno i idę spać
+
+→ Dopytania 02.2 i 02.3 **przeniesione do lekcji 0003** (wyjątek od reguły 2 z `../NOTES.md`, decyzja ucznia). W 0003 jako rozgrzewka/retrieval:
+  (a) 02.2: dwie liczby (suma `zamowienia` po statusach vs całość) + wniosek o addytywności `COUNT(DISTINCT)`; pasuje do JOIN — test unikalności przed i po złączeniu.
+  (b) 02.3: poprawka w jednej linii + liczba wierszy obu wersji (weryfikuje `order_items.user_id`).
+  (c) 02.4·3 w nowej formie: porównanie szacunków `COUNT(*)` vs `SUM(sale_price)`.
 

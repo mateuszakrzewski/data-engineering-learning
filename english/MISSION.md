@@ -13,7 +13,8 @@ opowiedzieć o swoim potoku, zgłosić problem i dopytać na spotkaniu.
 - Zadaję doprecyzowujące pytania na spotkaniu i rozumiem odpowiedź.
 
 ## Constraints
-- Piątek ~25 min; słownictwo pochodzi z lekcji tygodnia (spacing przez język).
+- Codziennie ~30–40 min, gdy uczeń ma 90 min (zmiana 2026-10-20, `../learning-records/0005`); piątek = mówienie: stand-up/demo tygodnia.
+- Materiał z lekcji dnia: główne źródło lekcji (po angielsku) + streszczenie/stand-up o tym, czego się nauczył (spacing przez język).
 
 ## Out of scope
 - Gramatyka akademicka, certyfikaty językowe.

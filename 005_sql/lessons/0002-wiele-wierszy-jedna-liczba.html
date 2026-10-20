@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Wiele wierszy, jedna liczba</title>
+<link rel="stylesheet" href="../../assets/lesson.css">
+<link rel="stylesheet" href="../../assets/quiz.css">
+</head>
+<body>
+<main class="page">
+
+<p class="eyebrow">SQL 02 · Agregacje</p>
+<h1>Wiele wierszy, jedna liczba</h1>
+<p class="subtitle">Średnia wartość zamówienia, przychód według statusu i klienci, którzy zwracają seryjnie. Do tego jedna reguła, która mówi, co oznacza jeden wiersz <em>wyniku</em>.</p>
+
+<div class="goal">
+  <strong>Twoja wygrana po tej lekcji</strong>
+  Liczysz sam <b>AOV</b> (<em>average order value</em>, średnią wartość zamówienia) TheLook i decydujesz, które statusy do niego wliczyć.
+  A w SQL od AI, który liczy „klientów z wieloma zwrotami", znajdujesz błąd ziarna: zapytanie się wykonuje i daje zawyżoną liczbę.
+</div>
+
+<h2>Na czym ta lekcja się opiera</h2>
+<p>Z <a href="0001-co-oznacza-jeden-wiersz.html">SQL 01</a>: <code>SELECT … FROM … WHERE … ORDER BY … LIMIT</code>, tekst w apostrofach,
+pełna nazwa tabeli w grawisach i <strong>ziarno</strong>: w <code>orders</code> jeden wiersz to jedno zamówienie, w <code>order_items</code> jedna pozycja.
+Pracujesz w konsoli BigQuery (Brave), projekt <code>datapiperejtan</code>. Wszystkie zapytania tej lekcji czytają razem kilkanaście MB.</p>
+<p>W rozgrzewce 19.10 sam zauważyłeś, że <code>AVG(sale_price)</code> z <code>order_items</code> to średnia cena pozycji, a nie AOV.
+Dziś zamieniasz tę obserwację w zapytanie.</p>
+
+<h2>1. Funkcja agregująca: wiele wierszy wchodzi, jedna wartość wychodzi</h2>
+<p><strong>Funkcja agregująca</strong> (<em>aggregate function</em>) bierze wartości z wielu wierszy i oddaje jedną wartość
+(<a href="https://www.postgresql.org/docs/current/tutorial-agg.html">PostgreSQL Tutorial 2.7</a>). Dziś potrzebujesz czterech:</p>
+<table>
+  <thead><tr><th>Funkcja</th><th>Rozwinięcie</th><th>Co oddaje</th></tr></thead>
+  <tbody>
+    <tr><td><code>COUNT(*)</code></td><td><em>count</em> = policz; <code>*</code> = cały wiersz</td><td>liczbę wierszy</td></tr>
+    <tr><td><code>COUNT(DISTINCT kolumna)</code></td><td><em>distinct</em> = różny</td><td>liczbę <b>różnych</b> wartości w kolumnie</td></tr>
+    <tr><td><code>SUM(kolumna)</code></td><td><em>sum</em> = suma</td><td>sumę wartości</td></tr>
+    <tr><td><code>AVG(kolumna)</code></td><td><em>average</em> = średnia</td><td>sumę podzieloną przez liczbę wierszy</td></tr>
+  </tbody>
+</table>
+<p>Dwa dodatki do czytelności wyniku. <code>AS nazwa</code> (<em>as</em> = jako) nadaje kolumnie wyniku nazwę, tzw. <strong>alias</strong>.
+<code>ROUND(x, 2)</code> (<em>round</em> = zaokrąglij) obcina wynik do 2 miejsc po przecinku. Przyda się, bo <code>sale_price</code> to <code>FLOAT</code>,
+a sumy takich liczb mają długie ogony, jak <code>24.989999771118164</code> z SQL 01.</p>
+
+<p><b>Reguła na AOV.</b> AOV to przychód podzielony przez <b>liczbę zamówień</b>. W <code>order_items</code> zamówienie zajmuje tyle wierszy, ile ma pozycji,
+więc mianownikiem nie może być <code>COUNT(*)</code> (to liczba pozycji). Mianownik to <code>COUNT(DISTINCT order_id)</code>: każde zamówienie liczone raz.
+<code>AVG(sale_price)</code> dzieli tę samą sumę przez liczbę pozycji, a pozycji jest co najmniej tyle, ile zamówień. Wychodzi więc mniejsza liczba.</p>
+
+<div class="task">
+  <h3>Cały sklep w jednym wierszu</h3>
+<pre><code>SELECT
+  COUNT(*)                                          AS pozycje,
+  COUNT(DISTINCT order_id)                          AS zamowienia,
+  ROUND(SUM(sale_price), 2)                         AS przychod,
+  ROUND(AVG(sale_price), 2)                         AS srednia_cena_pozycji,
+  ROUND(SUM(sale_price) / COUNT(DISTINCT order_id), 2) AS aov
+FROM `bigquery-public-data.thelook_ecommerce.order_items`;</code></pre>
+  <p><strong>Co robi:</strong> zwija wszystkie wiersze <code>order_items</code> w <b>jeden</b> wiersz z pięcioma liczbami. Ukośnik <code>/</code> to dzielenie.</p>
+  <p><strong>Na co patrzeć:</strong> różnicę między <code>pozycje</code> a <code>zamowienia</code> i między <code>srednia_cena_pozycji</code> a <code>aov</code>.
+  Zapisz te pięć liczb, przydadzą się w zadaniach.</p>
+  <p><strong>Czego się spodziewać:</strong> jeden wiersz. 15.10 tabela miała 181&nbsp;081 pozycji i 125&nbsp;004 zamówienia. Dane rosną codziennie, więc Twoje liczby będą większe:</p>
+<pre><code>pozycje  zamowienia  przychod  srednia_cena_pozycji  aov
+18…      12…         …         …                     …</code></pre>
+  <p class="note">Brak <code>LIMIT</code> jest tu w porządku: wynik ma jeden wiersz, a koszt i tak zależy od przeczytanych kolumn (<code>order_id</code>, <code>sale_price</code>), nie od wierszy wyniku.</p>
+</div>
+
+<h2>2. GROUP BY: jeden wiersz wyniku na grupę</h2>
+<p><code>GROUP BY kolumna</code> (<em>pogrupuj według</em>) dzieli wiersze na <strong>grupy</strong> o tej samej wartości kolumny,
+a funkcje agregujące liczą się osobno w każdej grupie
+(<a href="https://www.postgresql.org/docs/current/tutorial-agg.html">PostgreSQL Tutorial 2.7</a>).
+Stąd najważniejsza reguła tej lekcji:</p>
+<p class="goal" style="margin-top:0"><b>Ziarno wyniku = kolumny z <code>GROUP BY</code>.</b> <code>GROUP BY status</code> daje jeden wiersz na status.
+<code>GROUP BY user_id</code> daje jeden wiersz na klienta. Bez <code>GROUP BY</code> cała tabela to jedna grupa, czyli jeden wiersz, jak w zadaniu 1.</p>
+<p>Z tej reguły wynika druga. Każda kolumna w <code>SELECT</code> musi być albo w <code>GROUP BY</code>, albo wewnątrz funkcji agregującej.
+Grupa „Returned" ma tysiące różnych <code>order_id</code>, a w wierszu wyniku jest miejsce na jedną wartość. Baza nie zgaduje, którą wybrać, tylko zgłasza błąd.</p>
+
+<div class="task">
+  <h3>Przychód i AOV według statusu</h3>
+<pre><code>SELECT
+  status,
+  COUNT(*)                                          AS pozycje,
+  COUNT(DISTINCT order_id)                          AS zamowienia,
+  ROUND(SUM(sale_price), 2)                         AS przychod,
+  ROUND(SUM(sale_price) / COUNT(DISTINCT order_id), 2) AS aov
+FROM `bigquery-public-data.thelook_ecommerce.order_items`
+GROUP BY status
+ORDER BY przychod DESC;</code></pre>
+  <p><strong>Co robi:</strong> to samo co zadanie 1, ale osobno dla każdego statusu pozycji. <code>ORDER BY</code> może użyć aliasu z <code>SELECT</code>.</p>
+  <p><strong>Na co patrzeć:</strong> ile jest wierszy (czyli ile grup) i które statusy niosą największy przychód. Zapisz kolumnę <code>zamowienia</code>, bo zadanie 02.2 jej potrzebuje.</p>
+  <p><strong>Czego się spodziewać:</strong> pięć wierszy, po jednym na status: Shipped, Complete, Processing, Cancelled, Returned (tak było w <code>orders</code> 15.10). Liczby odkrywasz sam.</p>
+</div>
+
+<div class="task">
+  <h3>Kolumna bez grupy</h3>
+  <p>Dopisz w poprzednim zapytaniu <code>order_id</code> zaraz po <code>status</code>: <code>SELECT status, order_id, COUNT(*) …</code>. Nie zmieniaj <code>GROUP BY</code>. Uruchom i obserwuj.</p>
+  <p><strong>Na co patrzeć:</strong> czerwony znaczek w edytorze, jeszcze przed uruchomieniem.</p>
+  <p><strong>Czego się spodziewać:</strong> komunikat w rodzaju</p>
+<pre><code>SELECT list expression references column order_id which is neither grouped nor aggregated at [2:11]</code></pre>
+  <p>Czytamy: „lista <code>SELECT</code> odwołuje się do kolumny <code>order_id</code>, która nie jest ani grupowana, ani agregowana". To druga reguła powyżej.
+  Pozycja <code>[linia:znak]</code> zależy od tego, jak sformatowałeś zapytanie. Usuń <code>order_id</code>.</p>
+</div>
+
+<h2>3. WHERE przed grupowaniem, HAVING po</h2>
+<p>Baza wykonuje części zapytania w innej kolejności, niż je piszesz
+(<a href="https://www.postgresql.org/docs/current/sql-select.html">PostgreSQL: SELECT, Description</a>):</p>
+<pre><code>FROM → WHERE → GROUP BY → <span class="hl">HAVING</span> → SELECT → ORDER BY → LIMIT</code></pre>
+<p><code>WHERE</code> filtruje <b>wiersze tabeli</b>, zanim powstaną grupy, więc nie zna jeszcze wyników <code>COUNT</code> ani <code>SUM</code>.
+<code>HAVING</code> (<em>mający</em>) filtruje <b>gotowe grupy</b> i może użyć funkcji agregującej. Tutorial Postgresa ujmuje to tak: „<em>WHERE selects input rows before groups and aggregates are computed […], whereas HAVING selects group rows after</em>"
+(<a href="https://www.postgresql.org/docs/current/tutorial-agg.html">2.7</a>).</p>
+<p>Jeszcze jeden operator do <code>WHERE</code>: <code>status IN ('Complete', 'Shipped')</code> znaczy „status równa się <b>któremukolwiek</b> z tekstów na liście".
+To krótszy zapis dwóch porównań połączonych słowem <code>OR</code> (<em>lub</em>).</p>
+
+<div class="task">
+  <h3>Klienci z co najmniej dwoma zwrotami</h3>
+<pre><code>SELECT
+  user_id,
+  COUNT(*) AS zwrocone_zamowienia
+FROM `bigquery-public-data.thelook_ecommerce.orders`
+WHERE status = 'Returned'
+GROUP BY user_id
+HAVING COUNT(*) >= 2
+ORDER BY zwrocone_zamowienia DESC
+LIMIT 10;</code></pre>
+  <p><strong>Co robi:</strong> <code>WHERE</code> zostawia tylko zwrócone zamówienia. <code>GROUP BY user_id</code> robi z nich jedną grupę na klienta
+  (<code>user_id</code> to identyfikator klienta). <code>HAVING</code> zostawia klientów, którzy mają w grupie 2 wiersze albo więcej. <code>&gt;=</code> znaczy „większe lub równe".</p>
+  <p><strong>Na co patrzeć:</strong> ziarno wyniku (jeden wiersz = …?) i największą liczbę w <code>zwrocone_zamowienia</code>.</p>
+  <p><strong>Czego się spodziewać:</strong> do 10 wierszy: <code>user_id</code> i liczba ≥ 2. Ile ich jest i jak wysoko sięgają, zobaczysz sam.</p>
+  <p class="note">Tabela to <code>orders</code>, więc <code>COUNT(*)</code> liczy tu zamówienia. Zapamiętaj to, bo w zadaniu 02.3 AI użyło innej tabeli.</p>
+</div>
+
+<h2>Trening</h2>
+<p>Bez podpowiedzi w tekście obok. Dwa pytania są z SQL 01, więc odpowiadasz z pamięci.</p>
+
+<div class="quiz">
+  <p class="quiz__q"><span class="tag">02.4·1</span> Zapytanie kończy się na <code>GROUP BY user_id</code>. Co oznacza jeden wiersz wyniku?</p>
+  <div class="quiz__opts">
+    <button class="quiz__opt" data-why="Zamówienie byłoby ziarnem przy GROUP BY order_id.">jedno zamówienie klienta</button>
+    <button class="quiz__opt" data-why="Pozycja to ziarno order_items bez grupowania.">jedną pozycję zamówienia</button>
+    <button class="quiz__opt" data-correct data-why="Ziarno wyniku = kolumny z GROUP BY: jedna grupa na user_id.">jednego klienta sklepu</button>
+  </div>
+</div>
+<div class="quiz">
+  <p class="quiz__q"><span class="tag">02.4·2</span> Chcesz tylko statusy z przychodem powyżej miliona. Gdzie wpiszesz <code>SUM(sale_price) &gt; 1000000</code>?</p>
+  <div class="quiz__opts">
+    <button class="quiz__opt" data-correct data-why="HAVING działa po grupowaniu, więc zna już sumę każdej grupy.">w klauzuli HAVING po GROUP BY</button>
+    <button class="quiz__opt" data-why="WHERE działa przed grupowaniem i nie zna jeszcze sumy grupy.">w klauzuli WHERE przed GROUP BY</button>
+    <button class="quiz__opt" data-why="ORDER BY tylko sortuje, niczego nie odrzuca.">w klauzuli ORDER BY na końcu</button>
+  </div>
+</div>
+<div class="quiz">
+  <p class="quiz__q"><span class="tag">02.4·3</span> <span class="hl">SQL 01</span> · Które zapytanie do <code>order_items</code> przeczyta w BigQuery najmniej danych?</p>
+  <div class="quiz__opts">
+    <button class="quiz__opt" data-why="SUM(sale_price) musi przeczytać całą kolumnę sale_price.">SELECT SUM(sale_price) FROM order_items</button>
+    <button class="quiz__opt" data-correct data-why="COUNT(*) nie wymienia żadnej kolumny, a koszt zależy od przeczytanych kolumn. Sprawdź szacunek w konsoli.">SELECT COUNT(*) FROM order_items</button>
+    <button class="quiz__opt" data-why="Kolumna status czytana w całości, tekst waży 2 B plus długość.">SELECT status FROM order_items</button>
+  </div>
+</div>
+<div class="quiz">
+  <p class="quiz__q"><span class="tag">02.4·4</span> <span class="hl">SQL 01</span> · AI liczy „liczbę zamówień" jako <code>COUNT(*)</code> z <code>order_items</code>. Co dostaniesz?</p>
+  <div class="quiz__opts">
+    <button class="quiz__opt" data-correct data-why="Jeden wiersz order_items = jedna pozycja, więc liczysz pozycje.">liczbę pozycji zamówień</button>
+    <button class="quiz__opt" data-why="Dokładnie tyle byłoby tylko przy jednej pozycji w każdym zamówieniu.">dokładną liczbę zamówień</button>
+    <button class="quiz__opt" data-why="Klientów liczyłoby COUNT(DISTINCT user_id).">liczbę klientów sklepu</button>
+  </div>
+</div>
+<p class="score"></p>
+
+<h2>Z pamięci: apostrof czy cudzysłów (SQL 01)</h2>
+<div class="recall" data-hint="Najpierw napisz w czacie (02.5), potem kliknij. Podpowiedź: w BigQuery oba działały jak tekst. Rozmawialiśmy o tym przy zadaniu „Mała litera".">
+  <p class="recall__q"><span class="tag">02.5</span> Przenosisz z BigQuery do Snowflake zapytanie z warunkiem <code>WHERE status = "Returned"</code>. Co się stanie w Snowflake i jak to poprawisz?</p>
+  <div class="recall__a">W Snowflake (i w Postgresie) <code>"…"</code> oznacza <b>nazwę</b> (identyfikator), nie tekst. Zapytanie szuka więc kolumny <code>Returned</code>
+  i kończy się błędem, że takiej nie ma. Poprawka: <code>'Returned'</code>. Bezpieczny nawyk przy migracji: tekst zawsze w apostrofach
+  (<a href="https://docs.snowflake.com/en/sql-reference/identifiers-syntax">Snowflake: Identifier requirements</a>,
+  <a href="https://www.postgresql.org/docs/current/sql-syntax-lexical.html">Postgres 4.1.1–4.1.2</a>).</div>
+</div>
+
+<section class="respond">
+  <h2>Odpowiedz w czacie</h2>
+  <ol class="respond__list">
+    <li><span class="respond__id">02.1</span> <b>Decyzja: które AOV?</b> Marketing pyta: „ile średnio <b>zostaje nam</b> z jednego zamówienia po kampanii?" (czyli AOV netto: pieniądze, które sklep faktycznie zatrzymał).
+      Na podstawie wyniku „Przychód i AOV według statusu" zdecyduj, które statusy wliczasz, a które pomijasz, i jednym zdaniem uzasadnij każdy (Cancelled, Returned, Processing).
+      Gdyby pytanie brzmiało „ile klient wydaje przy składaniu zamówienia?" (AOV brutto), czy zmienisz wybór?
+      Potem policz swoje AOV jednym zapytaniem: zadanie 1 plus <code>WHERE status IN (…)</code>. Podaj wynik i porównaj z AOV całego sklepu z zadania 1.</li>
+    <li><span class="respond__id">02.2</span> <b>Czy grupy się sumują?</b> Zsumuj kolumnę <code>zamowienia</code> z pięciu wierszy „według statusu" i porównaj z <code>zamowienia</code> z zadania 1.
+      Równe czy nie? Co to mówi o tym, czy <b>w tych danych</b> pozycje jednego zamówienia mają różne statusy? Dashboard sumuje tę kolumnę, żeby pokazać „wszystkie zamówienia": czy to bezpieczne, gdyby jutro statusy pozycji zaczęły się różnić?</li>
+    <li><span class="respond__id">02.3</span> <b>Recenzja SQL od AI.</b> Poprosiłeś AI o „liczbę klientów, którzy zwrócili co najmniej 2 zamówienia". Dostałeś:
+<pre><code>SELECT user_id, COUNT(*) AS zwrocone_zamowienia
+FROM `bigquery-public-data.thelook_ecommerce.order_items`
+WHERE status = 'Returned'
+GROUP BY user_id
+HAVING COUNT(*) >= 2;</code></pre>
+      Zapytanie działa. Co liczy naprawdę i w którą stronę przekłamuje wynik? Popraw je (jedna zmiana wystarczy), uruchom obie wersje i podaj, ile wierszy zwraca każda.</li>
+    <li><span class="respond__id">02.4</span> <b>Trening</b>: kliknij „Skopiuj dla nauczyciela" pod quizem i wklej.</li>
+    <li><span class="respond__id">02.5</span> <b>Z pamięci</b>: odpowiedz na pytanie o Snowflake, zanim klikniesz „Pokaż odpowiedź".</li>
+  </ol>
+</section>
+
+<div class="source">
+  <span class="label">Główne źródło (po angielsku)</span>
+  <a href="https://www.postgresql.org/docs/current/tutorial-agg.html">PostgreSQL Tutorial: 2.7 Aggregate Functions</a>.
+  Oficjalna dokumentacja: <code>max</code>, <code>count</code>, <code>GROUP BY</code> i różnica <code>WHERE</code>/<code>HAVING</code> na małej tabeli pogodowej. Około 10 minut czytania.
+  Dialekt BigQuery: <a href="https://docs.cloud.google.com/bigquery/docs/reference/standard-sql/aggregate_functions">GoogleSQL: Aggregate functions</a>.
+  Trening w przeglądarce: <a href="https://pgexercises.com/questions/aggregates/">pgexercises: Aggregation</a> (pierwsze 5 zadań).
+</div>
+
+<div class="source">
+  <span class="label">Ściąga do tej lekcji</span>
+  <a href="../reference/sciaga-agregacje.html">Ściąga: agregacje i ziarno wyniku</a> · <a href="../reference/sciaga-select.html">Ściąga: SELECT i ziarno</a> ·
+  <a href="../reference/glossary.html">Glosariusz SQL</a>
+</div>
+
+<div class="ask">
+  <strong>Coś niejasne?</strong> Zapytaj mnie w czacie, np. o to, czemu <code>AVG</code> i AOV się różnią albo jak liczyć AOV w tabeli z kolumną <code>quantity</code> (taką masz pewnie w pracy).
+</div>
+
+<nav class="nav">
+  <a href="0001-co-oznacza-jeden-wiersz.html">← SQL 01</a>
+  <a href="../../roadmap.html">Mapa ścieżki</a>
+  <a href="../reference/sciaga-agregacje.html">Ściąga: agregacje</a>
+  <a href="../reference/glossary.html">Glosariusz</a>
+</nav>
+
+</main>
+<script src="../../assets/quiz.js"></script>
+</body>
+</html>

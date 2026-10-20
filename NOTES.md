@@ -15,17 +15,27 @@ Zasady pisania lekcji: `CLAUDE.md`. Szczegółowy profil i historia z sieci: `ne
 - Społeczność: nadal nieustalone — zaproponować, gdy pojawi się pytanie „z praktyki" (r/dataengineering, Slack dbt, Airflow Slack).
 
 ## Rytm
-**Dwa tory naraz + angielski.** Tor A = fundament IT (terminal, system, infrastruktura). Tor B = dane (SQL, bazy, modelowanie, transformacje).
+**Dwa tory naraz + angielski codziennie.** Tor A = fundament IT (terminal, system, infrastruktura). Tor B = dane (SQL, bazy, modelowanie, transformacje).
 
-**Tydzień (wzorzec, nie dogmat):**
-| Dzień | Blok 45 min | Jeśli 90 min |
-|---|---|---|
-| Pn | konsultacja 5′ + lekcja toru A | + ćwiczenia toru B / dokończenie |
-| Wt | konsultacja 5′ + lekcja toru B | + krótka lekcja toru A |
-| Śr | tor A | + tor B |
-| Czw | tor B | + tor A |
-| Pt | **angielski 25′** + przegląd tygodnia 15′ (mieszany quiz z obu torów) | + projekt |
-| Weekend | opcjonalnie: projekt portfolio / zaległe ćwiczenia | |
+**Progi czasu (decyzja ucznia 2026-10-20, LR-0005):**
+| Masz | Blok |
+|---|---|
+| 45 min | konsultacja 5′ + lekcja **toru dnia** |
+| 90 min | + **angielski ~30–40′** (codziennie, nie tylko w piątek) |
+| 120 min | + krótka lekcja **drugiego toru** |
+
+**Tydzień (wzorzec, nie dogmat) — tor dnia:**
+| Dzień | Tor dnia |
+|---|---|
+| Pn | A |
+| Wt | B |
+| Śr | A |
+| Czw | B |
+| Pt | **przegląd tygodnia** (mieszany quiz z obu torów) + angielski mówiony (stand-up/demo tygodnia) |
+| Weekend | opcjonalnie: projekt portfolio / zaległe ćwiczenia |
+
+**Angielski codzienny** (sesja w `english/`): materiał z lekcji dnia, nie osobny program — czytanie fragmentu głównego źródła lekcji
++ streszczenie/stand-up po angielsku o tym, czego się nauczył. Daje spacing technicznego materiału przez język i przecina domeny.
 
 **Reguły przełączania:**
 1. Domena = blok 4–6 lekcji, zamknięty **punktem kontrolnym**: krótki mieszany test bez podpowiedzi. ≥ 80% → następna domena w torze; mniej → jedna lekcja powtórkowa.
@@ -81,8 +91,8 @@ rozłożone na domeny. **Przy pisaniu lekcji domeny sprawdź, czy jej tematy z t
 |---|---|---|---|---|
 | network | ⏸ wstrzymana po 04 | 0004 kto odpowiada na nazwę | 2026-10-14 | LR-0011 „zła nazwa = DNS"; nazwy w kontenerze; 04.7–04.8 bez odpowiedzi. Powrót po bloku Docker. |
 | 002_linux | ▶ w toku | 0001 gdzie co leży — zamknięta | 2026-10-19 | misja potwierdzona; następna: 0002 uprawnienia. Repo Airflow w pracy w `/mnt/c` (LR-0002) |
-| 005_sql | ▶ w toku | 0001 co oznacza jeden wiersz (odpowiedzi komplet: quiz 5/5, 01.6 mocne) | 2026-10-17 | MISSION.md potwierdzony i zmieniony przez ucznia (LR-0003). Krytyka 01.2 (zadanie-kopia) → zasady 12–13 w CLAUDE.md. Lekcja o NULL otwiera się jego kluczem z 01.6. Następna: 0002 agregacje |
-| english | ▶ start (piątki) | — | — | cel: dokumentacja + spotkania |
+| 005_sql | ▶ w toku | 0002 wiele wierszy, jedna liczba (agregacje) — zamknięta 10-21 | 2026-10-21 | quiz 3/4 (✗ koszt `COUNT(*)`); 02.2 i 02.3 przeniesione do 0003 jako rozgrzewka (decyzja ucznia 10-21). Zadania bez briefu → LR-0004 domeny. Brak `bq` na LEGION. Następna: 0003 JOIN |
+| english | ▶ start (codziennie przy 90′, LR-0005) | — | — | cel: dokumentacja + spotkania; MISSION szkic do potwierdzenia na 1. sesji |
 | pozostałe | ○ w kolejce | — | — | — |
 
 ## Mosty (powiązania między domenami)
@@ -134,3 +144,35 @@ gdy każde zamówienie ma 1 pozycję. Dobry punkt wejścia do SQL 0002 (agregacj
 Wynik rozgrzewki: 2/2.
 **Decyzja:** poniedziałek = tor A. Reguła 2 blokuje Linux 0002, dopóki 01.1–01.5 otwarte →
 sesja `002_linux`: najpierw odpowiedzi 01.1–01.5, potem lekcja 0002 (uprawnienia). Przy 90 min: SQL 0002 (agregacje) w osobnej sesji.
+
+### 2026-10-20 (wt) — konsultacja
+Stan: Linux 0001 zamknięta 10-19, lekcja 0002 jeszcze niewydana. SQL 0001 zamknięta (komplet odpowiedzi). Network wstrzymany. Reguła 2 nic nie blokuje.
+Zauważone: w git status usunięte symlinki `NNN_domena/.claude/skills/teach` → na prośbę ucznia przywrócone (`git checkout`), wszystkie 12 wskazują na `.agents/skills/teach`.
+Rozgrzewka zadana (z innych domen niż dzisiejszy SQL, bez podpowiedzi):
+- R1 sieci (LR-0011, ta sama para **bez podpowiedzi**, nowy przypadek): DAG ładuje zamówienia do Postgresa; host `pg-orders` vs `airflow-webserver`, port 5432.
+- R2 Linux (spacing 0001, bez opcji): logi tasków Airflow w kontenerze + `cd opt/airflow/logs` wpisane w `/`, a potem w `~` — co się stanie i dlaczego.
+Odpowiedzi (po `/exit` i powrocie, ta sama data):
+> R1
+> a) błąd DNS brak takiej usługi
+> b) błąd TCP, nikt nie słucha na tym porcie
+> Poznam po słowach kluczowych jak can't find, 'name, lub TCP
+> R2
+> a) wejdę do katalogu
+> b) rzuci kod błędu 2, że nie ma takiej ścieżki
+
+Ocena: R1 ✓ — oba szczeble trafne **bez podpowiedzi** (wzorzec LR-0011 utrwalony). Odróżnianie po słowach kluczowych zbyt ogólne. Dopowiedziane:
+w b) log zawiera **adres IP** (`connection to server at "airflow-webserver" (172.x.x.x), port 5432 failed: Connection refused`), czyli nazwa już się rozwiązała.
+W a) jest `could not translate host name "pg-orders" to address`, bez IP. Brak IP w logu = DNS, jest IP = TCP.
+R2 ½ — a) ✓, b) skutek ✓, ale brak „dlaczego" (ścieżka względna liczona od bieżącego katalogu, `~` = `/home/airflow`). Kod wyjścia nietrafny:
+`cd` w bashu zwraca **1** (sprawdzone), 2 zwraca `ls` albo `cd` w `sh`/dash. Prawdopodobne pomieszanie z errno 2 = ENOENT („No such file or directory").
+Wynik: 1,5/2. Do spacingu: „dlaczego" przy ścieżkach względnych (Linux) oraz `$?` różne dla różnych komend → most do Linux 0002 / skryptów.
+**Decyzja:** wtorek = tor B → sesja `005_sql`, lekcja 0002 (agregacje: AOV = SUM / COUNT DISTINCT order_id; wejście kluczem z R2 z 10-19).
+Przy 90 min: `002_linux` 0002 (uprawnienia) w osobnej sesji — zaległa z poniedziałku.
+
+**Zmiana rytmu (2026-10-20, ta sama sesja, prośba ucznia):**
+> zastanawiam się, czy nie dać angielskiego codziennie jako dodatek do toru podstawowego, jeśli będę miał 90 minut. Umiejętności techniczne są konieczne, ale angielski to też podstawa i wymaga najwięcej treningu. Krótką lekcję z innego toru dorzucaj jeśli będę miał 120 minut dostępnego czasu. Dzięki temu pozwoli mi to pchać postępy równolegle, a podejrzewam, że z czasem te techniczne domeny zaczną się przecinać i będę ćwiczył wszystko na raz lub mix poszczególnych elementów z kilku domen
+
+→ Przyjęte (LR-0005): 45′ tor dnia · 90′ + angielski · 120′ + drugi tor. Angielski budowany na lekcji dnia. Koszt: drugi tor rusza się wolniej
+(dotąd „+ tor B" przy 90′) — każdy tor ~2 lekcje/tydz. przy 90′. Zaktualizowane: Rytm, roadmap.html, english/MISSION.md (Constraints).
+**Dziś (wt):** SQL 0002; przy 90′ → `english/` (pierwsza sesja: potwierdzenie misji + angielski na materiale SQL 0002); Linux 0002 dopiero przy 120′ albo jutro (śr = tor A).
+

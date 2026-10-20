@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Agregacje i ziarno wyniku</title>
+<link rel="stylesheet" href="../../assets/lesson.css">
+</head>
+<body>
+<main class="page">
+<p class="eyebrow">SQL · Ściąga</p>
+<h1>Agregacje i ziarno wyniku</h1>
+<p class="subtitle">Ziarno wyniku = kolumny z <code>GROUP BY</code>. Bez <code>GROUP BY</code>: jeden wiersz.</p>
+
+<h2>Szkielet i kolejność wykonania</h2>
+<pre><code>SELECT status, COUNT(*) AS pozycje      <span class="cmt">-- 5. kolumny wyniku: grupowane albo agregowane</span>
+FROM `projekt.zbiór.tabela`             <span class="cmt">-- 1. tabela</span>
+WHERE status IN ('Complete', 'Shipped') <span class="cmt">-- 2. filtr WIERSZY (przed grupami)</span>
+GROUP BY status                         <span class="cmt">-- 3. jedna grupa na wartość</span>
+HAVING COUNT(*) >= 2                    <span class="cmt">-- 4. filtr GRUP (zna agregaty)</span>
+ORDER BY pozycje DESC                   <span class="cmt">-- 6. sortowanie (może użyć aliasu)</span>
+LIMIT 10;                               <span class="cmt">-- 7.</span></code></pre>
+
+<table>
+  <thead><tr><th>Funkcja</th><th>Oddaje</th><th>Pułapka</th></tr></thead>
+  <tbody>
+    <tr><td><code>COUNT(*)</code></td><td>liczbę wierszy</td><td>liczy w ziarnie tabeli: w <code>order_items</code> to pozycje, nie zamówienia</td></tr>
+    <tr><td><code>COUNT(DISTINCT x)</code></td><td>liczbę różnych wartości</td><td>sumy po grupach nie muszą dawać całości (jedno <code>x</code> w kilku grupach)</td></tr>
+    <tr><td><code>SUM(x)</code></td><td>sumę</td><td><code>FLOAT</code> → długie ogony; <code>ROUND(x, 2)</code></td></tr>
+    <tr><td><code>AVG(x)</code></td><td>sumę / liczbę <b>wierszy</b></td><td>mianownik w ziarnie tabeli, nie w ziarnie pytania</td></tr>
+  </tbody>
+</table>
+
+<h2>Wzory biznesowe (TheLook)</h2>
+<table>
+  <tbody>
+    <tr><td>AOV</td><td><code>SUM(sale_price) / COUNT(DISTINCT order_id)</code> z <code>order_items</code></td></tr>
+    <tr><td>średnia cena pozycji</td><td><code>AVG(sale_price)</code> z <code>order_items</code>, zawsze ≤ AOV</td></tr>
+    <tr><td>klienci z ≥ 2 zwrotami</td><td><code>orders</code> + <code>WHERE status = 'Returned'</code> + <code>GROUP BY user_id HAVING COUNT(*) >= 2</code></td></tr>
+  </tbody>
+</table>
+
+<h2>Błędy</h2>
+<table>
+  <tbody>
+    <tr><td><code>… neither grouped nor aggregated</code></td><td>kolumna w <code>SELECT</code> bez <code>GROUP BY</code> i bez funkcji agregującej</td></tr>
+    <tr><td>agregat w <code>WHERE</code></td><td>niedozwolone: <code>WHERE</code> działa przed grupami → użyj <code>HAVING</code></td></tr>
+  </tbody>
+</table>
+
+<p class="note">Źródła: <a href="https://www.postgresql.org/docs/current/tutorial-agg.html">PostgreSQL Tutorial 2.7</a> ·
+<a href="https://www.postgresql.org/docs/current/sql-select.html">PostgreSQL: SELECT</a> ·
+<a href="https://docs.cloud.google.com/bigquery/docs/reference/standard-sql/aggregate_functions">GoogleSQL: Aggregate functions</a> ·
+lekcja <a href="../lessons/0002-wiele-wierszy-jedna-liczba.html">SQL 02</a></p>
+</main>
+</body>
+</html>
