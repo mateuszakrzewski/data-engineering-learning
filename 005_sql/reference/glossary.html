@@ -28,6 +28,11 @@ Pojęcia terminala: <a href="../../002_linux/reference/glossary.html">glosariusz
     <tr><td>grupa, <code>GROUP BY</code></td><td>wiersze o tej samej wartości kolumn grupujących; <b>ziarno wyniku = kolumny z GROUP BY</b></td><td>02</td></tr>
     <tr><td><code>HAVING</code></td><td>filtr gotowych grup (po agregacji); <code>WHERE</code> filtruje wiersze przed grupowaniem</td><td>02</td></tr>
     <tr><td>AOV (<em>average order value</em>)</td><td>średnia wartość zamówienia = przychód / liczba różnych zamówień</td><td>02</td></tr>
+    <tr><td><code>JOIN … ON</code></td><td>skleja wiersze dwóch tabel w jeden wiersz wyniku; <code>ON</code> mówi, które pasują. W BQ <code>JOIN</code> = <code>INNER JOIN</code>: tylko pary</td><td>03</td></tr>
+    <tr><td>alias tabeli</td><td>krótka nazwa tabeli (<code>orders AS o</code>); prefiks <code>o.kolumna</code> rozstrzyga takie same nazwy kolumn</td><td>03</td></tr>
+    <tr><td>klucz</td><td>kolumna (lub kombinacja), której wartość jest unikalna i wskazuje jeden wiersz; test: <code>COUNT(*) = COUNT(DISTINCT klucz)</code></td><td>03</td></tr>
+    <tr><td>jeden do wielu (<em>one-to-many</em>)</td><td>jednemu wierszowi jednej tabeli odpowiada wiele wierszy drugiej (klient → zamówienia → pozycje)</td><td>03</td></tr>
+    <tr><td>mnożenie wierszy (<em>fan-out</em>)</td><td>po złączeniu wiersze strony „jeden" powtarzają się; <code>SUM</code>/<code>COUNT(*)</code> na ich kolumnach zawyżone</td><td>03</td></tr>
   </tbody>
 </table>
 </main>

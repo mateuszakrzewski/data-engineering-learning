@@ -23,7 +23,7 @@ Wspólne komponenty: `../assets/` (lesson.css, quiz.css, quiz.js) — lekcje lin
 ## Plan domeny (wstępny, 5–6 lekcji + punkt kontrolny)
 1. 0001 Co oznacza jeden wiersz — SELECT/FROM/WHERE/ORDER BY/LIMIT, ziarno `orders` vs `order_items`, koszt kolumnowy ✅ wydana
 2. 0002 Wiele wierszy, jedna liczba — `COUNT(*)`/`COUNT(DISTINCT)`/`SUM`/`AVG`, AOV, `GROUP BY` (ziarno wyniku), `HAVING`, `IN` ✅ wydana 2026-10-20
-3. JOIN — `orders` ⋈ `order_items` ⋈ `users`; mnożenie wierszy (kluczowe dla misji: weryfikacja SQL od AI)
+3. 0003 Jeden do wielu — `JOIN … ON`, aliasy tabel, klucz, jeden do wielu, test ziarna przed/po, fan-out (`users`/`orders`/`order_items`) ✅ wydana 2026-10-22
 4. NULL — trójwartościowa logika, `COUNT(*)` vs `COUNT(col)`, `COALESCE` (`shipped_at`/`delivered_at`/`returned_at` — fulfillment)
 5. CTE — rozbijanie zapytania na kroki; lejek z `events` lub czas dostawy vs zwroty
 6. Funkcje okna — `ROW_NUMBER` (ostatnie zamówienie klienta, deduplikacja), `LAG`
@@ -48,6 +48,7 @@ Wspólne komponenty: `../assets/` (lesson.css, quiz.css, quiz.js) — lekcje lin
 |---|---|---|---|---|
 | 0001 co oznacza jeden wiersz | 2026-10-15 → 10-17 | 01.4: 5/5 · 01.5 ✓ · 01.3 ✓ (4 id, zweryfikowane) · 01.6 ✓✓ · 01.2 — sprzeciw, słuszny co do formy | wartość `'…'` vs nazwa; 0 wierszy = sukces (01.5 ✓); ziarno orders/order_items (quiz); koszt kolumnowy (quiz) | `'…'` vs `"…"` w dialektach; koszt = bajty logiczne wg typu (wyjaśnione, nieprzećwiczone); NULL w kluczu biznesowym (dopytanie do 01.6); MISSION.md — sprzeczność „procedury” vs Out of scope |
 | 0002 wiele wierszy, jedna liczba | 2026-10-20 → 10-21 | 02.4: 3/4 (✗ koszt kolumnowy) · 02.5 ✓ · 02.3 ½ · 02.1 ½ (zadanie bez kontekstu — mój błąd) · 02.2 ✗ sprzeczność | ziarno wyniku `GROUP BY` (quiz ✓); `WHERE` vs `HAVING` (quiz ✓); `"…"` = identyfikator w Snowflake (02.5 ✓); błąd ziarna w SQL od AI (02.3 sedno) | koszt `COUNT(*)` = brak kolumn (02.4·3 ✗ → retrieval w 0003); addytywność `COUNT(DISTINCT)` (02.2 — dopytanie o liczby); 02.3 kierunek + poprawka + liczba wierszy |
+| 0003 jeden do wielu | 2026-10-22 | 03.6: 3/3 · 03.1 ✓ · 03.3 ✓ · 03.2 ✓ · 03.4 ½ → 03.4b ✓ · 03.5 ½ → 03.5b ✓ | test ziarna po JOIN (quiz ✓); fan-out: która strona się mnoży (03.5b ✓ — sam uzasadnił przychód ziarnem pozycji); AOV po złączeniu (03.4b ✓ po dopytaniu); koszt `COUNT(*)` (03.3 ✓) | AOV ≠ `AVG(sale_price)` — błąd z 03.4 → retrieval bez podpowiedzi w 0004; `ROUND(x)` bez cyfr → liczby całkowite; zbędne złączenie (`orders` w 03.5) |
 
 ## Dziennik lekcji
 <!-- Format: ### lesson NNNN → odpowiedzi (cytaty dosłowne, po numerach) → ocena → co z tego wynika. -->
@@ -183,3 +184,81 @@ Ocena:
   (b) 02.3: poprawka w jednej linii + liczba wierszy obu wersji (weryfikuje `order_items.user_id`).
   (c) 02.4·3 w nowej formie: porównanie szacunków `COUNT(*)` vs `SUM(sale_price)`.
 
+### lesson 0003
+(2026-10-22) Lekcja wydana: `lessons/0003-jeden-do-wielu.html`. Ściąga `reference/sciaga-join.html`, glosariusz +5 pojęć (JOIN, alias tabeli, klucz, jeden do wielu, fan-out).
+Rozgrzewka = domknięcie SQL 02: 03.1 (=02.2: dwie liczby + wniosek o statusach pozycji), 03.2 (=02.3: poprawka + liczba wierszy obu wersji + kierunek),
+03.3 (=02.4·3 w nowej formie: recall z podpowiedzią + szacunki z walidatora). Reguła uczona przed zadaniami: „po złączeniu jeden do wielu ziarno = strona »wiele«".
+Zadania-decyzje z briefem (LR-0004): 03.4 AOV brutto wg `traffic_source` dla Head of Growth (pisze sam, + czy przesuwać budżet), 03.5 recenzja AI: `COUNT(*)` jako zamówienia
+po orders⋈order_items⋈users (zawyża), `SUM(oi.sale_price)` poprawne (strona „wiele"). Quiz 03.6: 3 pytania (2 nowe + ziarno `GROUP BY` z 02).
+LEFT JOIN świadomie odłożony do lekcji o NULL (wspomniany: INNER gubi wiersze bez pary).
+**Niezweryfikowane (brak `bq` na LEGION):** `order_items.user_id` (03.4 na tym stoi, 03.2 to sprawdzi), unikalność `users.id`, brak zamówień bez klienta
+(test „wiersze = zamowienia" po orders⋈users), brzmienie błędu `Column name … is ambiguous`, szacunek `COUNT(*)` = 0 B, wartości `traffic_source`.
+Czekam na odpowiedzi 03.1–03.6.
+
+(2026-10-22) Odpowiedzi:
+> 03.3 Mniej przeczyta SELECT COUNT(*), bo zapytanie nie wskazuje żadnej kolumny a BQ jest bazą kolumnową
+>
+> SQL 03 · Jeden do wielu — quiz: 3/3
+> 03.6·1  [tyle, ile zamówień w orders ✓]  03.6·2  [COUNT(DISTINCT o.order_id) po złączeniu ✓]  03.6·3  [jeden kanał pozyskania klientów ✓]
+>
+> 03.1 ilosc zamowien w obu zapytaniach wynosi tyle samo, czyli 125090. Wynika z tego, że pozycja dziedziczy status z zamowienia
+> 03.02 Zapytanie zwróciło listę klientów zamiast liczbę klientów, a dodatkowo liczy ilość zwróconych pozycji a nie zamowien dla każdego klienta. Zamieniłbym tabelę źródłową z order_items na orders. Wtedy otrzymam też mniejszą ilość wierszy, bo kilka pozycji moze wystepowac w jednym zamowieniu a nie odwrotnie
+> 03.4
+> select u.traffic_source, avg(oi.sale_price) sredni_przychod
+> from `bigquery-public-data.thelook_ecommerce.users` u
+> join `bigquery-public-data.thelook_ecommerce.order_items` oi
+>    on u.id = oi.user_id
+> group by u.traffic_source
+> order by u.traffic_source;
+>
+> jeden to user, czyli jjeden user przypisany do wielu itemow. Dla każdej pozycji przypisany jest kanał, przez który została sprzedana, więc wzięcie średniej ceny pozycji zagregowanej do kanału jest tutaj okej. Średnie przychody są niemal równe. Na podstawie takich danych nie można zadecydować o przesunięciu budżetu, bo taka średnia nic nie daje. Przez Facebooka można np sprzedać jedną bardzo drogą rzecz i nic więcej, co zawyży znacząco średnią cenę w danym kanale, bo będzie odpowiadała po prostu tej jednej drogiej rzeczy. Inny kanał może np. sprzedawać miliony pozycji, ale po niższej cenie, więc ruch na tym kanale jest dużo wyższy. Potrzebny jest też koszt pozyckania klienta w danym kanale, bo co z tego, że z jednego kanału będzie wysoki przychód, skoro koszt pozyskania klienta na tym kanale przekracza ten przychód powodując stratę
+> 03.5 kolumna zamowienia podaje w tym przypadku ilosc pozycji a nie zamowien
+
+Ocena:
+- 03.6 3/3 bez podpowiedzi (test ziarna po JOIN, `COUNT(DISTINCT)` po złączeniu, ziarno `GROUP BY` z 02).
+- 03.3 ✓ — reguła kosztu przeniesiona na zapytanie bez kolumn (wczoraj ✗ w 02.4·3). Szacunków z walidatora nie podał. Retrieval 02.4·3 domknięty.
+- 03.1 ✓ — 125 090 = 125 090 → w tych danych każde zamówienie w dokładnie jednej grupie statusu. „Dziedziczy" to hipoteza o mechanizmie generatora (dane pokazują zgodność, nie przyczynę) — drobne.
+  Zweryfikowane przy okazji: 125 090 zamówień 2026-10-22.
+- 03.2 ✓ — poprawka (`FROM orders`) i kierunek (wersja AI ma więcej wierszy) poprawne. Liczb wierszy nie podał. **Słuszna uwaga**: zapytanie zwraca listę, nie liczbę klientów —
+  moje 02.3 nazywało to „liczbą klientów", a liczbą jest tu liczba wierszy wyniku. Zwinięcie listy do jednej liczby wymaga podzapytania/CTE → naturalny start lekcji o CTE.
+- 03.4 ½ — (b) ✓ strona „jeden" = users, złączenie nie zmienia ziarna. (a) ✗ **policzył `AVG(sale_price)` = średnią cenę pozycji, nie AOV** — dokładnie to, co sam rozróżnił 10-19 (R2) i co uczyła 02.
+  Uzasadnienie pokazuje pomylenie dwóch pytań: „czy złączenie jest bezpieczne" (tak) i „czy metryka odpowiada pytaniu" (nie: AOV = przychód / `COUNT(DISTINCT order_id)`).
+  (c) brak liczby zamówień per kanał. (d) ✓✓ **mocne**: średnia bez wolumenu nie wystarcza; potrzebny koszt pozyskania (CAC) — TheLook go nie ma, więc decyzja budżetowa z samych tych danych jest niemożliwa. To dojrzały osąd biznesowy.
+  Zweryfikowane: `order_items.user_id` istnieje (zapytanie się wykonało).
+- 03.5 ½ — sedno ✓ (`COUNT(*)` = pozycje). Brak: kierunek (zawyża), dlaczego `przychod` jest dobry (`sale_price` ze strony „wiele"), poprawka (`COUNT(DISTINCT o.order_id)`).
+- Wzorzec: odpowiada na sedno, pomija podpunkty (02.3, 03.2, 03.4, 03.5). Częściowo mój błąd — 03.4 miało 4 podpunkty wbrew LR-0004 → LR-0005.
+Dopytałem: 03.4 przepisane na AOV + zamówienia per kanał (z wynikiem), 03.5 poprawka + jedno zdanie o przychodzie.
+
+(2026-10-22) Dopytania:
+> 03.4b
+> select u.traffic_source, count(distinct oi.order_id) il_zamowien, round(sum(oi.sale_price) / count(distinct oi.order_id)) sredni_przychod
+> from `bigquery-public-data.thelook_ecommerce.users` u
+> join `bigquery-public-data.thelook_ecommerce.order_items` oi
+>    on u.id = oi.user_id
+> group by u.traffic_source;
+>
+> traffic_source    il_zamowien    sredni_przychod
+> Display    5075    86.0
+> Search    88333    87.0
+> Organic    18269    86.0
+> Facebook    7319    87.0
+> Email    6094    87.0
+>
+> 03.5b
+> SELECT
+>   u.traffic_source,
+>   COUNT(distinct oi.order_id)                   AS zamowienia,
+>   ROUND(SUM(oi.sale_price), 2) AS przychod
+> FROM `bigquery-public-data.thelook_ecommerce.orders`      AS o
+> JOIN `bigquery-public-data.thelook_ecommerce.order_items` AS oi ON oi.order_id = o.order_id
+> JOIN `bigquery-public-data.thelook_ecommerce.users`       AS u  ON o.user_id = u.id
+> GROUP BY u.traffic_source;
+>
+>  przychod jest liczony i tak z ceny pozycji a jeden wiersz to jedna pozycja, więc suma jest prawidłowa
+
+Ocena:
+- 03.4b ✓ — wzór AOV poprawny. `ROUND(x)` bez drugiego argumentu zaokrągla do całości → 86/87 ukrywa różnice; `ROUND(x, 2)`. Na pytanie o zmianę kolejności nie odpowiedział (przy tym zaokrągleniu się nie da).
+  Sprawdzone z jego liczb: 5075+88333+18269+7319+6094 = 125 090 = liczba zamówień z 03.1 → każde zamówienie w dokładnie jednym kanale (klient ma jeden `traffic_source`).
+  Wniosek: AOV praktycznie równe we wszystkich kanałach, Search ≈ 71% zamówień → jego decyzja (d) się potwierdza: AOV nie różnicuje kanałów, liczą się wolumen i CAC.
+- 03.5b ✓ — `COUNT(DISTINCT …)` i uzasadnienie ziarnem strony „wiele" (pozycja) samodzielne i poprawne. Dopowiedziane: `orders` jest tu zbędne (`oi.user_id = u.id` wystarcza) — mniej kolumn, mniej kosztu.
+- Lekcja 0003 zamknięta. Następna: 0004 NULL (+ LEFT JOIN), retrieval: AOV vs `AVG` jako recenzja AI bez podpowiedzi; klucz z `komentarz` (01.6) jako otwarcie.

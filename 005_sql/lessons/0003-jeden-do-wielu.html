@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Jeden do wielu</title>
+<link rel="stylesheet" href="../../assets/lesson.css">
+<link rel="stylesheet" href="../../assets/quiz.css">
+</head>
+<body>
+<main class="page">
+
+<p class="eyebrow">SQL 03 · JOIN</p>
+<h1>Jeden do wielu</h1>
+<p class="subtitle">Łączysz zamówienia z klientami, żeby zobaczyć kanał pozyskania. Po drodze uczysz się jednego testu,
+który mówi, czy złączenie zmieniło ziarno, zanim liczby trafią do raportu.</p>
+
+<div class="goal">
+  <strong>Twoja wygrana po tej lekcji</strong>
+  Sam piszesz AOV według kanału pozyskania (<code>traffic_source</code>) dla marketingu.
+  A w SQL od AI, który łączy trzy tabele, wskazujesz kolumnę zawyżoną przez złączenie i wiesz, dlaczego druga kolumna z tego samego zapytania jest poprawna.
+</div>
+
+<h2>Na czym ta lekcja się opiera</h2>
+<p>Z <a href="0001-co-oznacza-jeden-wiersz.html">SQL 01</a>: ziarno (<code>orders</code> = zamówienie, <code>order_items</code> = pozycja), tekst w apostrofach.
+Z <a href="0002-wiele-wierszy-jedna-liczba.html">SQL 02</a>: <code>COUNT(*)</code>, <code>COUNT(DISTINCT …)</code>, <code>SUM</code>, alias <code>AS</code>,
+<code>GROUP BY</code> (ziarno wyniku = kolumny z <code>GROUP BY</code>), <code>HAVING</code> i reguła na AOV: <code>SUM(sale_price) / COUNT(DISTINCT order_id)</code>.
+Pracujesz w konsoli BigQuery (Brave), projekt <code>datapiperejtan</code>.</p>
+
+<h2>0. Najpierw domknięcie SQL 02</h2>
+<p>Trzy rzeczy przeniesione z wczoraj (Twoja decyzja z 21.10). Odpowiedzi idą do czatu jako 03.1–03.3, polecenia są w sekcji „Odpowiedz w czacie" na dole.
+Robisz je teraz, bo 03.1 przygotowuje grunt pod dzisiejszy test.</p>
+
+<div class="recall" data-hint="Najpierw napisz w czacie (03.3), potem kliknij. Podpowiedź z SQL 01: BigQuery przechowuje dane kolumnami i czyta tylko kolumny wymienione w zapytaniu, w całości.">
+  <p class="recall__q"><span class="tag">03.3</span> <span class="hl">SQL 01</span> · Które z dwóch zapytań do <code>order_items</code> przeczyta mniej: <code>SELECT COUNT(*)</code> czy <code>SELECT SUM(sale_price)</code>? Dlaczego?</p>
+  <div class="recall__a"><code>COUNT(*)</code> nie wymienia żadnej kolumny, a koszt w BigQuery zależy od przeczytanych kolumn, nie od liczby wierszy.
+  Liczbę wierszy BigQuery zna z metadanych tabeli, więc szacunek powinien być bliski 0 B. <code>SUM(sale_price)</code> czyta całą kolumnę <code>FLOAT</code> (8 B na wiersz)
+  (<a href="https://docs.cloud.google.com/bigquery/docs/estimate-costs">BigQuery: Estimate and control costs</a>).</div>
+</div>
+
+<h2>1. JOIN: dokładasz kolumny z drugiej tabeli</h2>
+<p>W <code>orders</code> jest <code>user_id</code>, czyli identyfikator klienta, ale nie ma informacji, skąd klient przyszedł.
+Ta leży w tabeli <code>users</code> (klienci), w kolumnie <code>traffic_source</code> (<em>źródło ruchu</em>: kanał, przez który klient trafił do sklepu, np. wyszukiwarka albo e-mail).
+Jeden wiersz <code>users</code> to jeden klient, a jego identyfikator to kolumna <code>id</code>.</p>
+
+<p><code>JOIN</code> (<em>połącz</em>) skleja wiersze dwóch tabel w jeden wiersz wyniku. <code>ON</code> (<em>na warunku</em>) mówi, które wiersze do siebie pasują:
+<code>ON o.user_id = u.id</code> znaczy „sklej zamówienie z tym klientem, którego <code>id</code> równa się <code>user_id</code> zamówienia"
+(<a href="https://www.postgresql.org/docs/current/tutorial-join.html">PostgreSQL Tutorial 2.6</a>).
+Samo <code>JOIN</code> to w BigQuery skrót od <code>INNER JOIN</code> (<em>złączenie wewnętrzne</em>): do wyniku trafiają tylko pary, które pasują.
+Zamówienie bez pasującego klienta by zniknęło. Złączenie, które zostawia też wiersze bez pary, poznasz w lekcji o NULL.</p>
+
+<p><b>Aliasy tabel.</b> <code>FROM … orders AS o</code> nadaje tabeli krótką nazwę <code>o</code>, tak jak w SQL 02 nadawałeś nazwy kolumnom.
+Potem piszesz <code>o.user_id</code>: „kolumna <code>user_id</code> z tabeli <code>o</code>". To nie jest ozdoba. <code>orders</code> i <code>order_items</code>
+mają kolumny o tych samych nazwach (<code>status</code>, <code>user_id</code>, <code>created_at</code>), więc bez prefiksu baza nie wie, o którą chodzi, i zgłasza błąd w rodzaju
+<code>Column name status is ambiguous</code> (<em>ambiguous</em> = niejednoznaczna).</p>
+
+<p><b>Klucz.</b> Kolumna, której wartość jest <b>unikalna</b> w tabeli i wskazuje dokładnie jeden wiersz, to <strong>klucz</strong>.
+W <code>users</code> kluczem jest <code>id</code>. W <code>orders</code> <code>user_id</code> <b>nie</b> jest unikalne: klient może mieć wiele zamówień.
+Taka para to relacja <strong>jeden do wielu</strong> (<em>one-to-many</em>): jeden klient, wiele zamówień.
+Ten sam test robiłeś w pracy na tabeli sprzedaży w 01.6: klucz to kolumny, których kombinacja się nie powtarza.</p>
+
+<div class="task">
+  <h3>Czy <code>id</code> w <code>users</code> naprawdę jest kluczem?</h3>
+<pre><code>SELECT
+  COUNT(*)           AS wiersze,
+  COUNT(DISTINCT id) AS rozne_id
+FROM `bigquery-public-data.thelook_ecommerce.users`;</code></pre>
+  <p><strong>Co robi:</strong> liczy wiersze tabeli klientów i różne wartości <code>id</code>.</p>
+  <p><strong>Na co patrzeć:</strong> czy dwie liczby są równe. Równe znaczy: żadne <code>id</code> się nie powtarza, więc każde zamówienie znajdzie co najwyżej jednego klienta.</p>
+  <p><strong>Czego się spodziewać:</strong> jeden wiersz z dwiema liczbami (sklep ma ich ~100 tys., dokładnie zobaczysz sam):</p>
+<pre><code>wiersze  rozne_id
+…        …</code></pre>
+</div>
+
+<div class="task">
+  <h3>Zamówienia z kanałem klienta</h3>
+<pre><code>SELECT
+  COUNT(*)                   AS wiersze,
+  COUNT(DISTINCT o.order_id) AS zamowienia
+FROM `bigquery-public-data.thelook_ecommerce.orders` AS o
+JOIN `bigquery-public-data.thelook_ecommerce.users`  AS u
+  ON o.user_id = u.id;</code></pre>
+  <p><strong>Co robi:</strong> skleja każde zamówienie z jego klientem i liczy wiersze wyniku oraz różne zamówienia w nim.</p>
+  <p><strong>Na co patrzeć:</strong> czy <code>wiersze</code> = <code>zamowienia</code>. To jest <b>test ziarna po złączeniu</b>: jeśli równe, jeden wiersz wyniku to nadal jedno zamówienie.</p>
+  <p><strong>Czego się spodziewać:</strong> dwie równe liczby, zbliżone do liczby zamówień z SQL 02. Jeśli wyjdą różne, to sygnał, że coś jest nie tak z kluczem: napisz mi.</p>
+  <p class="note">Klient z 5 zamówieniami pojawia się w 5 wierszach, ale każdy z tych wierszy to inne zamówienie. Powtarza się strona „jeden" (klient), ziarno pozostaje ziarnem zamówień.</p>
+</div>
+
+<h2>2. Strona „wiele": złączenie mnoży wiersze</h2>
+<p>Teraz w drugą stronę. <code>orders</code> do <code>order_items</code> to też jeden do wielu: jedno zamówienie, wiele pozycji.
+Złączenie <code>ON oi.order_id = o.order_id</code> daje <b>jeden wiersz na pozycję</b>, a dane zamówienia (np. <code>num_of_item</code>, liczba pozycji w zamówieniu)
+<b>kopiują się</b> do każdej jego pozycji. Stąd reguła tej lekcji:</p>
+<p class="goal" style="margin-top:0"><b>Po złączeniu jeden do wielu ziarno wyniku = ziarno strony „wiele".</b>
+Kolumny ze strony „wiele" liczysz jak zawsze. Kolumny ze strony „jeden" powtarzają się w każdym dopasowanym wierszu,
+więc <code>SUM</code> albo <code>COUNT(*)</code> na nich jest zawyżone. To zjawisko nazywa się <strong>mnożeniem wierszy</strong> (<em>fan-out</em>, dosł. „rozchodzenie się wachlarzem").</p>
+
+<div class="task">
+  <h3>Przed złączeniem</h3>
+<pre><code>SELECT SUM(num_of_item) AS pozycje_wg_orders
+FROM `bigquery-public-data.thelook_ecommerce.orders`;</code></pre>
+  <p><strong>Co robi:</strong> sumuje liczbę pozycji zapisaną w każdym zamówieniu. 15.10 sprawdziłem, że <code>num_of_item</code> zgadza się z liczbą wierszy w <code>order_items</code>.</p>
+  <p><strong>Na co patrzeć:</strong> wynik powinien być bliski liczbie pozycji z SQL 02 (<code>pozycje</code>, ~180 tys.+). Zapisz go.</p>
+  <p><strong>Czego się spodziewać:</strong> jedna liczba.</p>
+</div>
+
+<div class="task">
+  <h3>Po złączeniu z pozycjami</h3>
+<pre><code>SELECT
+  COUNT(*)                   AS wiersze,
+  COUNT(DISTINCT o.order_id) AS zamowienia,
+  SUM(o.num_of_item)         AS pozycje_po_join
+FROM `bigquery-public-data.thelook_ecommerce.orders`      AS o
+JOIN `bigquery-public-data.thelook_ecommerce.order_items` AS oi
+  ON oi.order_id = o.order_id;</code></pre>
+  <p><strong>Co robi:</strong> skleja każde zamówienie z każdą jego pozycją, potem liczy wiersze, różne zamówienia i tę samą sumę co wyżej.</p>
+  <p><strong>Na co patrzeć:</strong> trzy porównania. <code>wiersze</code> vs <code>zamowienia</code> (test ziarna: równe?).
+  <code>pozycje_po_join</code> vs wynik „Przed złączeniem".</p>
+  <p><strong>Czego się spodziewać:</strong> test ziarna nie przechodzi, a <code>pozycje_po_join</code> jest wyraźnie większe niż przed. Zapytanie wykonuje się bez żadnego błędu.</p>
+  <p class="note">Zamówienie z 3 pozycjami ma <code>num_of_item = 3</code> i po złączeniu zajmuje 3 wiersze. Do sumy wchodzi 3 + 3 + 3 = 9 zamiast 3.
+  Zamówienia z jedną pozycją nie zmieniają się wcale, dlatego błąd nie jest „razy dwa", tylko zależy od koszyka.</p>
+</div>
+
+<h2>3. Test przed i po: nawyk na SQL od AI</h2>
+<p>Każde złączenie sprawdzasz tak samo, jak w zadaniach powyżej:</p>
+<ol>
+  <li>Jakie ziarno chcę mieć w wyniku? (np. zamówienie)</li>
+  <li>Czy klucz tabeli, którą dołączam, jest unikalny? (<code>COUNT(*)</code> = <code>COUNT(DISTINCT klucz)</code>). Jeśli tak, ziarno się nie zmieni.</li>
+  <li>Po złączeniu: <code>COUNT(*)</code> = <code>COUNT(DISTINCT klucz ziarna)</code>? Jeśli nie, to każda kolumna ze strony „jeden" w <code>SUM</code>/<code>COUNT(*)</code> jest zawyżona.</li>
+</ol>
+<p>W dbt to samo sprawdza wbudowany test <code>unique</code> na kolumnie modelu
+(<a href="https://docs.getdbt.com/reference/resource-properties/data-tests">dbt: data tests</a>). Robisz więc ręcznie to, co później zautomatyzujesz.</p>
+
+<h2>Trening</h2>
+<p>Bez podpowiedzi w tekście obok. Ostatnie pytanie jest z SQL 02.</p>
+
+<div class="quiz">
+  <p class="quiz__q"><span class="tag">03.6·1</span> <code>orders AS o JOIN users AS u ON o.user_id = u.id</code>, a <code>id</code> jest unikalne. Ile wierszy ma wynik?</p>
+  <div class="quiz__opts">
+    <button class="quiz__opt" data-why="Każde zamówienie ma klienta, ale klient ma wiele zamówień.">tyle, ile klientów w users</button>
+    <button class="quiz__opt" data-why="Tak byłoby bez warunku ON: każdy z każdym.">zamówienia razy liczba klientów</button>
+    <button class="quiz__opt" data-correct data-why="Klucz po stronie users jest unikalny, więc każde zamówienie dostaje jeden wiersz.">tyle, ile zamówień w orders</button>
+  </div>
+</div>
+<div class="quiz">
+  <p class="quiz__q"><span class="tag">03.6·2</span> Po złączeniu <code>orders</code> z <code>order_items</code> chcesz policzyć zamówienia. Czego użyjesz?</p>
+  <div class="quiz__opts">
+    <button class="quiz__opt" data-correct data-why="Każde zamówienie liczone raz, niezależnie od liczby pozycji.">COUNT(DISTINCT o.order_id) po złączeniu</button>
+    <button class="quiz__opt" data-why="Po złączeniu jeden wiersz to pozycja, więc liczysz pozycje.">COUNT(*) po złączeniu tabel</button>
+    <button class="quiz__opt" data-why="num_of_item kopiuje się do każdej pozycji, suma jest zawyżona.">SUM(o.num_of_item) po złączeniu</button>
+  </div>
+</div>
+<div class="quiz">
+  <p class="quiz__q"><span class="tag">03.6·3</span> <span class="hl">SQL 02</span> · Zapytanie kończy się na <code>GROUP BY u.traffic_source</code>. Co oznacza jeden wiersz wyniku?</p>
+  <div class="quiz__opts">
+    <button class="quiz__opt" data-why="Klient byłby ziarnem przy GROUP BY u.id.">jednego klienta z danego kanału</button>
+    <button class="quiz__opt" data-correct data-why="Ziarno wyniku = kolumny z GROUP BY: jeden wiersz na kanał.">jeden kanał pozyskania klientów</button>
+    <button class="quiz__opt" data-why="Zamówienie byłoby ziarnem przy GROUP BY o.order_id.">jedno zamówienie z danego kanału</button>
+  </div>
+</div>
+<p class="score"></p>
+
+
+
+<section class="respond">
+  <h2>Odpowiedz w czacie</h2>
+  <ol class="respond__list">
+    <li><span class="respond__id">03.1</span> <b>Domknięcie 02.2: czy grupy się sumują?</b> Uruchom „Przychód i AOV według statusu" z SQL 02.
+      Podaj dwie liczby: sumę kolumny <code>zamowienia</code> z pięciu wierszy oraz <code>zamowienia</code> z zadania „Cały sklep w jednym wierszu".
+      Jedno zdanie: co z porównania wynika o statusach pozycji w jednym zamówieniu <b>w tych danych</b>.</li>
+    <li><span class="respond__id">03.2</span> <b>Domknięcie 02.3: poprawka SQL od AI.</b> Zapytanie AI liczyło klientów z ≥ 2 zwrotami na <code>order_items</code>.
+      Napisz wersję poprawioną (jedna zmiana), uruchom obie i podaj liczbę wierszy każdej. Która jest większa i dlaczego akurat ta?</li>
+    <li><span class="respond__id">03.3</span> <b>Z pamięci, potem sprawdź</b>: odpowiedz na pytanie o koszt z sekcji 0, zanim klikniesz „Pokaż odpowiedź".
+      Potem wklej oba zapytania do edytora (bez uruchamiania) i podaj szacunki z prawego górnego rogu.</li>
+    <li><span class="respond__id">03.4</span> <b>Decyzja: AOV według kanału.</b> Head of Growth planuje budżet reklamowy na Q1 i pyta:
+      „klienci z którego kanału (<code>traffic_source</code>) składają zamówienia o najwyższej średniej wartości?". Chce AOV brutto, czyli wszystkie statusy.
+      Napisz zapytanie sam: <code>order_items</code> złączone z <code>users</code> (w <code>order_items</code> jest kolumna <code>user_id</code>, ta z 02.3), AOV według reguły z SQL 02, jeden wiersz na kanał.
+      Podaj: (a) zapytanie, (b) jednym zdaniem, dlaczego to złączenie nie psuje AOV (która strona to „jeden"),
+      (c) wynik z liczbą zamówień przy każdym kanale, (d) czy różnice AOV są dość duże, żeby przesuwać budżet, i co jeszcze chciałbyś wiedzieć przed taką decyzją.</li>
+    <li><span class="respond__id">03.5</span> <b>Recenzja SQL od AI.</b> Prosisz o raport dla marketingu: „liczba zamówień i przychód według kanału". Dostajesz:
+<pre><code>SELECT
+  u.traffic_source,
+  COUNT(*)                   AS zamowienia,
+  ROUND(SUM(oi.sale_price), 2) AS przychod
+FROM `bigquery-public-data.thelook_ecommerce.orders`      AS o
+JOIN `bigquery-public-data.thelook_ecommerce.order_items` AS oi ON oi.order_id = o.order_id
+JOIN `bigquery-public-data.thelook_ecommerce.users`       AS u  ON o.user_id = u.id
+GROUP BY u.traffic_source;</code></pre>
+      Zapytanie działa. Która z dwóch kolumn liczb jest błędna, w którą stronę przekłamuje i dlaczego druga jest dobra? Popraw błędną kolumnę.</li>
+    <li><span class="respond__id">03.6</span> <b>Trening</b>: kliknij „Skopiuj dla nauczyciela" pod quizem i wklej.</li>
+  </ol>
+</section>
+
+<div class="source">
+  <span class="label">Główne źródło (po angielsku)</span>
+  <a href="https://www.postgresql.org/docs/current/tutorial-join.html">PostgreSQL Tutorial: 2.6 Joins Between Tables</a>.
+  Oficjalna dokumentacja: złączenie dwóch tabel, aliasy, prefiksy kolumn, złączenie wewnętrzne i zewnętrzne. Około 10 minut.
+  Dialekt BigQuery: <a href="https://docs.cloud.google.com/bigquery/docs/reference/standard-sql/query-syntax#join_types">GoogleSQL: Join types</a>.
+  Trening w przeglądarce: <a href="https://pgexercises.com/questions/joins/">pgexercises: Joins and Subqueries</a> (pierwsze 4 zadania).
+</div>
+
+<div class="source">
+  <span class="label">Ściąga do tej lekcji</span>
+  <a href="../reference/sciaga-join.html">Ściąga: JOIN i test ziarna</a> · <a href="../reference/sciaga-agregacje.html">Ściąga: agregacje</a> ·
+  <a href="../reference/glossary.html">Glosariusz SQL</a>
+</div>
+
+<div class="ask">
+  <strong>Coś niejasne?</strong> Zapytaj mnie w czacie, np. jak sprawdzić klucz złożony z kilku kolumn (jak Twój z 01.6) albo co się dzieje, gdy obie strony złączenia są „wiele".
+</div>
+
+<nav class="nav">
+  <a href="0002-wiele-wierszy-jedna-liczba.html">← SQL 02</a>
+  <a href="../../roadmap.html">Mapa ścieżki</a>
+  <a href="../reference/sciaga-join.html">Ściąga: JOIN</a>
+  <a href="../reference/glossary.html">Glosariusz</a>
+</nav>
+
+</main>
+<script src="../../assets/quiz.js"></script>
+</body>
+</html>

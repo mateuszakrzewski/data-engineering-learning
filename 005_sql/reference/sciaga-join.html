@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>JOIN i test ziarna</title>
+<link rel="stylesheet" href="../../assets/lesson.css">
+</head>
+<body>
+<main class="page">
+<p class="eyebrow">SQL · Ściąga</p>
+<h1>JOIN i test ziarna</h1>
+<p class="subtitle">Po złączeniu jeden do wielu ziarno wyniku = ziarno strony „wiele". Kolumny strony „jeden" się powtarzają.</p>
+
+<h2>Szkielet</h2>
+<pre><code>SELECT u.traffic_source, COUNT(DISTINCT o.order_id) AS zamowienia
+FROM `projekt.zbiór.orders` AS o          <span class="cmt">-- alias tabeli</span>
+JOIN `projekt.zbiór.users`  AS u          <span class="cmt">-- JOIN = INNER JOIN: tylko pary, które pasują</span>
+  ON o.user_id = u.id                     <span class="cmt">-- warunek dopasowania: klucz obcy = klucz</span>
+GROUP BY u.traffic_source;</code></pre>
+
+<h2>Test ziarna (przed i po)</h2>
+<table>
+  <tbody>
+    <tr><td>1. przed</td><td><code>COUNT(*) = COUNT(DISTINCT klucz)</code> w dołączanej tabeli → klucz unikalny, ziarno się nie zmieni</td></tr>
+    <tr><td>2. po</td><td><code>COUNT(*) = COUNT(DISTINCT klucz_ziarna)</code> na wyniku złączenia → ziarno zachowane</td></tr>
+    <tr><td>3. gdy nie</td><td><code>SUM</code>/<code>COUNT(*)</code> na kolumnach strony „jeden" są zawyżone (<em>fan-out</em>)</td></tr>
+  </tbody>
+</table>
+
+<h2>TheLook: relacje</h2>
+<table>
+  <thead><tr><th>„jeden"</th><th>„wiele"</th><th>warunek</th></tr></thead>
+  <tbody>
+    <tr><td><code>users</code> (klient)</td><td><code>orders</code> (zamówienie)</td><td><code>o.user_id = u.id</code></td></tr>
+    <tr><td><code>users</code> (klient)</td><td><code>order_items</code> (pozycja)</td><td><code>oi.user_id = u.id</code></td></tr>
+    <tr><td><code>orders</code> (zamówienie)</td><td><code>order_items</code> (pozycja)</td><td><code>oi.order_id = o.order_id</code></td></tr>
+  </tbody>
+</table>
+
+<h2>Pułapki</h2>
+<table>
+  <tbody>
+    <tr><td><code>Column name … is ambiguous</code></td><td>ta sama nazwa kolumny w dwóch tabelach (<code>status</code>, <code>user_id</code>, <code>created_at</code>) → prefiks aliasu</td></tr>
+    <tr><td><code>SUM(o.num_of_item)</code> po złączeniu z pozycjami</td><td>zamówienie z n pozycjami wnosi n·n zamiast n</td></tr>
+    <tr><td><code>COUNT(*)</code> jako „zamówienia" po złączeniu z pozycjami</td><td>liczy pozycje → <code>COUNT(DISTINCT o.order_id)</code></td></tr>
+    <tr><td><code>INNER JOIN</code></td><td>wiersz bez pary znika z wyniku po cichu (złączenie zewnętrzne: lekcja o NULL)</td></tr>
+  </tbody>
+</table>
+
+<p class="note">Źródła: <a href="https://www.postgresql.org/docs/current/tutorial-join.html">PostgreSQL Tutorial 2.6</a> ·
+<a href="https://docs.cloud.google.com/bigquery/docs/reference/standard-sql/query-syntax#join_types">GoogleSQL: Join types</a> ·
+<a href="https://docs.getdbt.com/reference/resource-properties/data-tests">dbt: data tests</a> ·
+lekcja <a href="../lessons/0003-jeden-do-wielu.html">SQL 03</a></p>
+</main>
+</body>
+</html>

@@ -91,7 +91,7 @@ rozłożone na domeny. **Przy pisaniu lekcji domeny sprawdź, czy jej tematy z t
 |---|---|---|---|---|
 | network | ⏸ wstrzymana po 04 | 0004 kto odpowiada na nazwę | 2026-10-14 | LR-0011 „zła nazwa = DNS"; nazwy w kontenerze; 04.7–04.8 bez odpowiedzi. Powrót po bloku Docker. |
 | 002_linux | ▶ w toku | 0001 gdzie co leży — zamknięta | 2026-10-19 | misja potwierdzona; następna: 0002 uprawnienia. Repo Airflow w pracy w `/mnt/c` (LR-0002) |
-| 005_sql | ▶ w toku | 0002 wiele wierszy, jedna liczba (agregacje) — zamknięta 10-21 | 2026-10-21 | quiz 3/4 (✗ koszt `COUNT(*)`); 02.2 i 02.3 przeniesione do 0003 jako rozgrzewka (decyzja ucznia 10-21). Zadania bez briefu → LR-0004 domeny. Brak `bq` na LEGION. Następna: 0003 JOIN |
+| 005_sql | ▶ w toku | 0003 jeden do wielu (JOIN) — zamknięta | 2026-10-22 | quiz 3/3, dopytania 03.4b/03.5b ✓. Do powtórki: AOV ≠ `AVG(sale_price)` (błąd w 03.4), `ROUND(x, 2)`. Brak `bq` na LEGION. Następna: 0004 NULL (+ LEFT JOIN), start od klucza z `komentarz` (01.6) |
 | english | ▶ start (codziennie przy 90′, LR-0005) | — | — | cel: dokumentacja + spotkania; MISSION szkic do potwierdzenia na 1. sesji |
 | pozostałe | ○ w kolejce | — | — | — |
 
@@ -104,6 +104,7 @@ rozłożone na domeny. **Przy pisaniu lekcji domeny sprawdź, czy jej tematy z t
 - SQL → Postgres → Snowflake → dbt: ten sam SQL, coraz wyżej po stosie.
 - SQL → Airflow / data quality: „0 wierszy = sukces, kod wyjścia 0” (SQL 01, retrieval z network LR-0010) — literówka w filtrze nie wywala zadania; zalążek testów danych w `017_data_quality`.
 - SQL → modelowanie: ziarno (`orders` vs `order_items`, SQL 01) — pierwsze zetknięcie z pojęciem Kimballa przed `013_data_modeling`.
+- SQL → modelowanie / data quality (SQL 03, 2026-10-22): relacja jeden do wielu = wymiar → fakt (`users` → `orders` → `order_items`); test „COUNT(*) = COUNT(DISTINCT klucz)" przed i po JOIN = ręczny odpowiednik testu `unique` w dbt (`017_data_quality`, `dbt`).
 - Linux → SQL: wielkość liter (`/Etc` vs `'returned'`) — ta sama pułapka, ale SQL milczy zamiast zgłosić błąd.
 - Python → API → Airflow: skrypt → wywołanie API → zadanie w DAG-u (kod wyjścia! `network/LR-0010`).
 
@@ -176,3 +177,29 @@ Przy 90 min: `002_linux` 0002 (uprawnienia) w osobnej sesji — zaległa z ponie
 (dotąd „+ tor B" przy 90′) — każdy tor ~2 lekcje/tydz. przy 90′. Zaktualizowane: Rytm, roadmap.html, english/MISSION.md (Constraints).
 **Dziś (wt):** SQL 0002; przy 90′ → `english/` (pierwsza sesja: potwierdzenie misji + angielski na materiale SQL 0002); Linux 0002 dopiero przy 120′ albo jutro (śr = tor A).
 
+
+### 2026-10-22 (czw) — konsultacja
+Stan: SQL 0002 zamknięta 10-21; dopytania 02.2, 02.3 i retrieval 02.4·3 przeniesione do 0003 (decyzja ucznia). Linux 0002 wciąż niewydana
+(śr 10-21 poszła na domknięcie SQL 0002). `english/` — pierwsza sesja jeszcze się nie odbyła. Network wstrzymany (ostatnie pytanie 10-20 → kolejne ~10-23/25).
+Reguła 2 nic nie blokuje (otwarte pytania z 0002 są wpisane do 0003).
+Rozgrzewka zadana (inne domeny niż dzisiejszy SQL, bez podpowiedzi, zadania-decyzje):
+- R1 Linux (spacing 0001 + brakujące „dlaczego" z 10-20): BashOperator domyślnie startuje w katalogu tymczasowym pod `/tmp`; `cd opt/airflow/logs` — uda się? dlaczego? poprawka.
+- R2 Linux × SQL × sieci (kod wyjścia, „co to znaczy dla potoku", bez podpowiedzi z 01.4): dwa sprawdzenia przed ładowaniem —
+  `getent hosts pg-orders` (nazwy nie ma) vs `SELECT … WHERE status = 'returned'` (małe litery). Które zatrzyma DAG, które przepuści problem, dlaczego.
+Odpowiedzi:
+> R1
+> Nie uda się, bo komenda nie znajdzie szukanego katalogu. Tego zasobu tam nie ma, a wywołuje względną ścieżkę. Żeby zadziało trzeba podać ścieżkę bezwzględną z / na początku
+> R2
+> A) DAG padnie na DNS, bo nie ma takiego hosta
+> B) Jeśli DAG doszedłby do zapytania, to SQL przepuści dalej, tylko zwróci 0 wierszy, bo nie ma takiego statusu
+>
+> Propozycja na piątek może być
+
+Ocena: R1 ✓ — tym razem jest „dlaczego" (ścieżka względna + w katalogu startowym nie ma takiego podkatalogu) i poprawka (`/` na początku → `cd /opt/airflow/logs`).
+Nie nazwał wprost, że względna liczy się od bieżącego katalogu (`/tmp/airflowtmpXXXX`), ale mechanizm z 10-20 domknięty. 
+R2 ½ — oba skutki trafne (A zatrzymuje, B przepuszcza; sam zauważył kolejność zadań — B nie ruszy, gdy A padnie). Brak tego, o co prosiło zadanie:
+kodu wyjścia (`getent` → 2, ≠ 0 → task failed; zapytanie z 0 wierszami → 0 → success) i konsekwencji dla potoku (cicho pusty raport/tabela → potrzebny test „czy są wiersze").
+„Padnie na DNS" — skrót myślowy z sieci; sam `getent` nie rzuca błędu, tylko zwraca 2, a Airflow czyta kod. Dopowiedziane.
+Wynik: 1,5/2. Spacing: kod wyjścia jako **mechanizm** decyzji Airflow (nie tylko „padnie / przejdzie") — w Linux 0002 (`$?` po `chmod`/brak uprawnień = 1).
+**Decyzja:** czwartek = tor B → `005_sql` lekcja 0003 (JOIN), otwarcie: dopytania 02.2/02.3 + 02.4·3 w nowej formie. Przy 90′: pierwsza sesja `english/`.
+**Piątek 10-23 (zgoda ucznia):** zamiast pełnego przeglądu tygodnia → `002_linux` lekcja 0002 (uprawnienia) + krótki mieszany quiz w rozgrzewce konsultacji.
